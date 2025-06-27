@@ -1,5 +1,5 @@
-import React from 'react';
-import { Plus, CheckCircle, Circle, Calendar } from 'lucide-react';
+import React, { useState } from 'react';
+import { Plus, CheckCircle, Circle, Calendar, Edit, Trash2, MoreVertical } from 'lucide-react';
 import { Task } from '../types';
 import { getCurrentDate, formatDate } from '../utils/storage';
 
@@ -7,9 +7,19 @@ interface TasksProps {
   tasks: Task[];
   onCreateTask: () => void;
   onCompleteTask: (taskId: string) => void;
+  onEditTask: (task: Task) => void;
+  onDeleteTask: (taskId: string) => void;
 }
 
-const Tasks: React.FC<TasksProps> = ({ tasks, onCreateTask, onCompleteTask }) => {
+const Tasks: React.FC<TasksProps> = ({ 
+  tasks, 
+  onCreateTask, 
+  onCompleteTask,
+  onEditTask,
+  onDeleteTask
+}) => {
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  
   const todaysTasks = tasks.filter(task => task.date === getCurrentDate());
   const tomorrowsTasks = tasks.filter(task => {
     const tomorrow = new Date();
@@ -19,9 +29,28 @@ const Tasks: React.FC<TasksProps> = ({ tasks, onCreateTask, onCompleteTask }) =>
 
   const completedToday = todaysTasks.filter(task => task.completed).length;
 
+  const handleMenuClick = (taskId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setOpenMenuId(openMenuId === taskId ? null : taskId);
+  };
+
+  const handleEdit = (task: Task, e: React.MouseEvent) => {
+    e.stopPropagation();
+    onEditTask(task);
+    setOpenMenuId(null);
+  };
+
+  const handleDelete = (taskId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (confirm('Are you sure you want to delete this task?')) {
+      onDeleteTask(taskId);
+    }
+    setOpenMenuId(null);
+  };
+
   const TaskItem: React.FC<{ task: Task }> = ({ task }) => (
     <div
-      className={`bg-white rounded-lg p-4 border transition-all hover:shadow-md ${
+      className={`bg-white rounded-lg p-4 border transition-all hover:shadow-md relative ${
         task.completed ? 'border-green-200 bg-green-50' : 'border-gray-200'
       }`}
     >
@@ -44,6 +73,36 @@ const Tasks: React.FC<TasksProps> = ({ tasks, onCreateTask, onCompleteTask }) =>
           >
             {task.name}
           </span>
+        </div>
+        
+        {/* Menu Button */}
+        <div className="relative">
+          <button
+            onClick={(e) => handleMenuClick(task.id, e)}
+            className="p-1 hover:bg-gray-100 rounded transition-colors"
+          >
+            <MoreVertical className="w-4 h-4 text-gray-500" />
+          </button>
+
+          {/* Dropdown Menu */}
+          {openMenuId === task.id && (
+            <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border py-1 z-10 min-w-[120px]">
+              <button
+                onClick={(e) => handleEdit(task, e)}
+                className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2"
+              >
+                <Edit className="w-4 h-4" />
+                <span>Edit</span>
+              </button>
+              <button
+                onClick={(e) => handleDelete(task.id, e)}
+                className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2 text-red-600"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Delete</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -155,6 +214,14 @@ const Tasks: React.FC<TasksProps> = ({ tasks, onCreateTask, onCompleteTask }) =>
           </div>
         )}
       </div>
+
+      {/* Click outside to close menu */}
+      {openMenuId && (
+        <div
+          className="fixed inset-0 z-5"
+          onClick={() => setOpenMenuId(null)}
+        />
+      )}
     </div>
   );
 };

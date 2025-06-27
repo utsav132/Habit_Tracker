@@ -99,6 +99,12 @@ export const getCurrentDate = (): string => {
   return new Date().toISOString().split('T')[0];
 };
 
+export const getYesterdayDate = (): string => {
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  return yesterday.toISOString().split('T')[0];
+};
+
 export const getTomorrowDate = (): string => {
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);

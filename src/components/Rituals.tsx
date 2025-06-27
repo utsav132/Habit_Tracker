@@ -1,5 +1,5 @@
-import React from 'react';
-import { Plus, Clock, Zap, Flame, Gift, Calendar } from 'lucide-react';
+import React, { useState } from 'react';
+import { Plus, Clock, Zap, Flame, Gift, Calendar, Edit, Trash2, MoreVertical } from 'lucide-react';
 import { Ritual, HabitItem } from '../types';
 import { getTodaysScheduledItems } from '../utils/streaks';
 import { getCurrentDate } from '../utils/storage';
@@ -8,9 +8,19 @@ interface RitualsProps {
   rituals: Ritual[];
   onCreateRitual: () => void;
   onCompleteRitual: (ritualId: string) => void;
+  onEditRitual: (ritual: Ritual) => void;
+  onDeleteRitual: (ritualId: string) => void;
 }
 
-const Rituals: React.FC<RitualsProps> = ({ rituals, onCreateRitual, onCompleteRitual }) => {
+const Rituals: React.FC<RitualsProps> = ({ 
+  rituals, 
+  onCreateRitual, 
+  onCompleteRitual,
+  onEditRitual,
+  onDeleteRitual
+}) => {
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  
   const todaysRituals = getTodaysScheduledItems(rituals);
   const completedToday = todaysRituals.filter(ritual => 
     ritual.lastCompleted === getCurrentDate()
@@ -35,6 +45,25 @@ const Rituals: React.FC<RitualsProps> = ({ rituals, onCreateRitual, onCompleteRi
     
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     return frequency.map(d => days[d]).join(', ');
+  };
+
+  const handleMenuClick = (ritualId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setOpenMenuId(openMenuId === ritualId ? null : ritualId);
+  };
+
+  const handleEdit = (ritual: Ritual, e: React.MouseEvent) => {
+    e.stopPropagation();
+    onEditRitual(ritual);
+    setOpenMenuId(null);
+  };
+
+  const handleDelete = (ritualId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (confirm('Are you sure you want to delete this ritual?')) {
+      onDeleteRitual(ritualId);
+    }
+    setOpenMenuId(null);
   };
 
   return (
@@ -103,7 +132,7 @@ const Rituals: React.FC<RitualsProps> = ({ rituals, onCreateRitual, onCompleteRi
               return (
                 <div
                   key={ritual.id}
-                  className={`bg-white rounded-xl p-4 border-2 transition-all hover:shadow-lg ${
+                  className={`bg-white rounded-xl p-4 border-2 transition-all hover:shadow-lg relative ${
                     isCompletedToday
                       ? 'border-green-200 bg-green-50'
                       : isScheduledToday
@@ -147,26 +176,58 @@ const Rituals: React.FC<RitualsProps> = ({ rituals, onCreateRitual, onCompleteRi
                       )}
                     </div>
 
-                    {canComplete && (
-                      <button
-                        onClick={() => onCompleteRitual(ritual.id)}
-                        className="ml-4 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
-                      >
-                        Complete
-                      </button>
-                    )}
+                    <div className="flex items-center space-x-2 ml-4">
+                      {canComplete && (
+                        <button
+                          onClick={() => onCompleteRitual(ritual.id)}
+                          className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
+                        >
+                          Complete
+                        </button>
+                      )}
 
-                    {isCompletedToday && (
-                      <div className="ml-4 bg-green-100 text-green-700 px-4 py-2 rounded-lg text-sm font-medium">
-                        Completed ✓
-                      </div>
-                    )}
+                      {isCompletedToday && (
+                        <div className="bg-green-100 text-green-700 px-4 py-2 rounded-lg text-sm font-medium">
+                          Completed ✓
+                        </div>
+                      )}
 
-                    {!isScheduledToday && (
-                      <div className="ml-4 text-gray-400 text-sm">
-                        Not scheduled
+                      {!isScheduledToday && (
+                        <div className="text-gray-400 text-sm">
+                          Not scheduled
+                        </div>
+                      )}
+
+                      {/* Menu Button */}
+                      <div className="relative">
+                        <button
+                          onClick={(e) => handleMenuClick(ritual.id, e)}
+                          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                        >
+                          <MoreVertical className="w-4 h-4 text-gray-500" />
+                        </button>
+
+                        {/* Dropdown Menu */}
+                        {openMenuId === ritual.id && (
+                          <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border py-1 z-10 min-w-[120px]">
+                            <button
+                              onClick={(e) => handleEdit(ritual, e)}
+                              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2"
+                            >
+                              <Edit className="w-4 h-4" />
+                              <span>Edit</span>
+                            </button>
+                            <button
+                              onClick={(e) => handleDelete(ritual.id, e)}
+                              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2 text-red-600"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              <span>Delete</span>
+                            </button>
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </div>
                   </div>
                 </div>
               );
@@ -174,6 +235,14 @@ const Rituals: React.FC<RitualsProps> = ({ rituals, onCreateRitual, onCompleteRi
           </div>
         )}
       </div>
+
+      {/* Click outside to close menu */}
+      {openMenuId && (
+        <div
+          className="fixed inset-0 z-5"
+          onClick={() => setOpenMenuId(null)}
+        />
+      )}
     </div>
   );
 };

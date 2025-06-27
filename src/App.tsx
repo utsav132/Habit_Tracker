@@ -4,12 +4,15 @@ import { AppData, Ritual, Habit, Task, HabitItem } from './types';
 import { getStoredData, saveData, getCurrentDate } from './utils/storage';
 import { calculateStreak, shouldPromoteToHabit, shouldDemoteToRitual } from './utils/streaks';
 import { checkAchievements } from './utils/achievements';
+import { NotificationManager } from './utils/notifications';
 import Rituals from './components/Rituals';
 import Tasks from './components/Tasks';
 import Habits from './components/Habits';
 import Achievements from './components/Achievements';
 import CreateRitual from './components/CreateRitual';
 import CreateTask from './components/CreateTask';
+import EditRitual from './components/EditRitual';
+import EditTask from './components/EditTask';
 import ConfettiAnimation from './components/ConfettiAnimation';
 
 type TabType = 'rituals' | 'tasks' | 'habits' | 'achievements';
@@ -19,12 +22,31 @@ function App() {
   const [data, setData] = useState<AppData>(getStoredData());
   const [isCreateRitualOpen, setIsCreateRitualOpen] = useState(false);
   const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
+  const [isEditRitualOpen, setIsEditRitualOpen] = useState(false);
+  const [isEditTaskOpen, setIsEditTaskOpen] = useState(false);
+  const [editingRitual, setEditingRitual] = useState<Ritual | null>(null);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
   const [rewardMessage, setRewardMessage] = useState<string>('');
+
+  const notificationManager = NotificationManager.getInstance();
+
+  // Initialize notifications on app load
+  useEffect(() => {
+    const initNotifications = async () => {
+      const hasPermission = await notificationManager.requestPermission();
+      if (hasPermission) {
+        notificationManager.rescheduleAllRituals(data.rituals);
+      }
+    };
+    initNotifications();
+  }, []);
 
   // Save data whenever it changes
   useEffect(() => {
     saveData(data);
+    // Reschedule notifications when rituals change
+    notificationManager.rescheduleAllRituals(data.rituals);
   }, [data]);
 
   // Check and update achievements
@@ -42,6 +64,7 @@ function App() {
       if (newlyUnlocked.length > 0) {
         setShowConfetti(true);
         setRewardMessage(`🎉 Achievement Unlocked: ${newlyUnlocked[0].name}!`);
+        notificationManager.sendAchievementNotification(newlyUnlocked[0].name);
       }
     }
   }, [data.rituals, data.habits, data.tasks]);
@@ -59,6 +82,9 @@ function App() {
       ...prev,
       rituals: [...prev.rituals, newRitual],
     }));
+
+    // Schedule notification for the new ritual
+    notificationManager.scheduleRitualNotification(newRitual);
   };
 
   const handleCreateTask = (taskData: Omit<Task, 'id' | 'createdAt'>) => {
@@ -71,6 +97,49 @@ function App() {
     setData(prev => ({
       ...prev,
       tasks: [...prev.tasks, newTask],
+    }));
+  };
+
+  const handleEditRitual = (ritual: Ritual) => {
+    setEditingRitual(ritual);
+    setIsEditRitualOpen(true);
+  };
+
+  const handleSaveEditedRitual = (updatedRitual: Ritual) => {
+    setData(prev => ({
+      ...prev,
+      rituals: prev.rituals.map(r => r.id === updatedRitual.id ? updatedRitual : r),
+    }));
+    setIsEditRitualOpen(false);
+    setEditingRitual(null);
+  };
+
+  const handleDeleteRitual = (ritualId: string) => {
+    notificationManager.clearNotification(ritualId);
+    setData(prev => ({
+      ...prev,
+      rituals: prev.rituals.filter(r => r.id !== ritualId),
+    }));
+  };
+
+  const handleEditTask = (task: Task) => {
+    setEditingTask(task);
+    setIsEditTaskOpen(true);
+  };
+
+  const handleSaveEditedTask = (updatedTask: Task) => {
+    setData(prev => ({
+      ...prev,
+      tasks: prev.tasks.map(t => t.id === updatedTask.id ? updatedTask : t),
+    }));
+    setIsEditTaskOpen(false);
+    setEditingTask(null);
+  };
+
+  const handleDeleteTask = (taskId: string) => {
+    setData(prev => ({
+      ...prev,
+      tasks: prev.tasks.filter(t => t.id !== taskId),
     }));
   };
 
@@ -109,15 +178,28 @@ function App() {
         
         setRewardMessage(`🎉 ${ritual.name} is now a habit! You've maintained it for 60+ days!`);
         setShowConfetti(true);
+        notificationManager.sendRewardNotification(
+          'New Habit Formed!',
+          `${ritual.name} is now a habit! You've maintained it for 60+ days!`
+        );
       } else {
         // Show reward message if ritual has a reward
         if (ritual.reward) {
           setRewardMessage(`🎁 ${ritual.reward}`);
           setShowConfetti(true);
+          notificationManager.sendRewardNotification('Reward Earned!', ritual.reward);
         } else {
           setRewardMessage(`✅ Great job completing ${ritual.name}!`);
           setShowConfetti(true);
         }
+      }
+
+      // Send notifications for habit-triggered rituals
+      const triggeredRituals = prev.rituals.filter(r => 
+        r.trigger.type === 'habit' && r.trigger.habitId === ritualId
+      );
+      if (triggeredRituals.length > 0) {
+        notificationManager.sendHabitTriggerNotification(ritual.name, triggeredRituals);
       }
 
       return {
@@ -163,10 +245,19 @@ function App() {
         // Show reward message
         if (habit.reward) {
           setRewardMessage(`🎁 ${habit.reward}`);
+          notificationManager.sendRewardNotification('Reward Earned!', habit.reward);
         } else {
           setRewardMessage(`✅ Excellent! You maintained ${habit.name}!`);
         }
         setShowConfetti(true);
+      }
+
+      // Send notifications for habit-triggered rituals
+      const triggeredRituals = prev.rituals.filter(r => 
+        r.trigger.type === 'habit' && r.trigger.habitId === habitId
+      );
+      if (triggeredRituals.length > 0) {
+        notificationManager.sendHabitTriggerNotification(habit.name, triggeredRituals);
       }
 
       return {
@@ -273,6 +364,8 @@ function App() {
                 rituals={data.rituals}
                 onCreateRitual={() => setIsCreateRitualOpen(true)}
                 onCompleteRitual={handleCompleteRitual}
+                onEditRitual={handleEditRitual}
+                onDeleteRitual={handleDeleteRitual}
               />
             )}
             {activeTab === 'tasks' && (
@@ -280,6 +373,8 @@ function App() {
                 tasks={data.tasks}
                 onCreateTask={() => setIsCreateTaskOpen(true)}
                 onCompleteTask={handleCompleteTask}
+                onEditTask={handleEditTask}
+                onDeleteTask={handleDeleteTask}
               />
             )}
             {activeTab === 'habits' && (
@@ -307,6 +402,21 @@ function App() {
         isOpen={isCreateTaskOpen}
         onClose={() => setIsCreateTaskOpen(false)}
         onSave={handleCreateTask}
+      />
+
+      <EditRitual
+        isOpen={isEditRitualOpen}
+        onClose={() => setIsEditRitualOpen(false)}
+        onSave={handleSaveEditedRitual}
+        ritual={editingRitual}
+        existingHabits={allHabits}
+      />
+
+      <EditTask
+        isOpen={isEditTaskOpen}
+        onClose={() => setIsEditTaskOpen(false)}
+        onSave={handleSaveEditedTask}
+        task={editingTask}
       />
     </div>
   );

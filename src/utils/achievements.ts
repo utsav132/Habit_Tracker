@@ -1,5 +1,5 @@
 import { AppData, Achievement, HabitItem } from '../types';
-import { getCurrentDate } from './storage';
+import { getCurrentDate, getYesterdayDate } from './storage';
 
 export const checkAchievements = (data: AppData): Achievement[] => {
   const updatedAchievements = data.achievements.map(achievement => {
@@ -44,18 +44,26 @@ export const checkAchievements = (data: AppData): Achievement[] => {
         break;
 
       case 'complete-all-tasks':
-        const todaysTasks = data.tasks.filter(task => task.date === getCurrentDate());
-        if (todaysTasks.length > 0 && todaysTasks.every(task => task.completed)) {
+        // Check if all tasks were completed yesterday (to avoid same-day additions)
+        const yesterday = getYesterdayDate();
+        const yesterdaysTasks = data.tasks.filter(task => task.date === yesterday);
+        if (yesterdaysTasks.length > 0 && yesterdaysTasks.every(task => task.completed)) {
           return { ...achievement, unlocked: true, unlockedAt: getCurrentDate() };
         }
         break;
 
       case 'complete-all-rituals':
-        const todaysRituals = data.rituals.filter(ritual => 
-          ritual.frequency.includes(new Date().getDay())
+        // Check if all rituals were completed yesterday
+        const yesterdayDate = new Date();
+        yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+        const yesterdayDayOfWeek = yesterdayDate.getDay();
+        const yesterdayStr = getYesterdayDate();
+        
+        const yesterdaysRituals = data.rituals.filter(ritual => 
+          ritual.frequency.includes(yesterdayDayOfWeek)
         );
-        if (todaysRituals.length > 0 && 
-            todaysRituals.every(ritual => ritual.lastCompleted === getCurrentDate())) {
+        if (yesterdaysRituals.length > 0 && 
+            yesterdaysRituals.every(ritual => ritual.completedDates?.includes(yesterdayStr))) {
           return { ...achievement, unlocked: true, unlockedAt: getCurrentDate() };
         }
         break;
@@ -82,7 +90,7 @@ const calculateConsecutiveAllRitualDays = (rituals: HabitItem[]): number => {
   let consecutiveDays = 0;
   const today = new Date();
   
-  for (let i = 0; i < 30; i++) {
+  for (let i = 1; i <= 30; i++) { // Start from yesterday
     const checkDate = new Date(today);
     checkDate.setDate(today.getDate() - i);
     const dateStr = checkDate.toISOString().split('T')[0];
