@@ -81,6 +81,25 @@ function App() {
     }
   }, [data.rituals, data.habits, data.tasks]);
 
+  // Update streaks when date changes in dev mode
+  useEffect(() => {
+    if (devMode) {
+      setData(prev => ({
+        ...prev,
+        rituals: prev.rituals.map(ritual => ({
+          ...ritual,
+          streak: calculateStreak(ritual),
+          frozenStreaks: calculateFrozenStreaks(ritual),
+        })),
+        habits: prev.habits.map(habit => ({
+          ...habit,
+          streak: calculateStreak(habit),
+          frozenStreaks: calculateFrozenStreaks(habit),
+        })),
+      }));
+    }
+  }, [currentDate, devMode]);
+
   const generateId = () => Math.random().toString(36).substr(2, 9);
 
   const toggleDevMode = () => {

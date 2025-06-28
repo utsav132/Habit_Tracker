@@ -8,96 +8,12 @@ export const calculateStreak = (item: HabitItem): number => {
 
   const dateManager = DateManager.getInstance();
   const sortedDates = item.completedDates.slice().sort();
-  const today = dateManager.isDevMode() 
-    ? new Date(dateManager.getCurrentDate()) 
-    : new Date();
-  let streak = 0;
-  let currentDate = new Date(today);
-  let frozenStreaksUsed = 0;
-  const maxFrozenStreaks = item.frozenStreaks || 0;
-
-  // Start from today and work backwards
-  while (currentDate >= new Date(sortedDates[0])) {
-    const dateStr = currentDate.toISOString().split('T')[0];
-    const dayOfWeek = currentDate.getDay();
-    
-    // Check if this day is in the frequency
-    if (item.frequency.includes(dayOfWeek)) {
-      if (sortedDates.includes(dateStr)) {
-        streak++;
-      } else {
-        // Check if they can use a frozen streak
-        if (frozenStreaksUsed < maxFrozenStreaks) {
-          frozenStreaksUsed++;
-          streak++; // Maintain streak using frozen streak
-        } else {
-          break; // Streak is broken
-        }
-      }
-    }
-    
-    currentDate.setDate(currentDate.getDate() - 1);
-  }
-
-  return streak;
-};
-
-export const calculateFrozenStreaks = (item: HabitItem): number => {
-  if (!item.completedDates || item.completedDates.length === 0) {
-    return 0;
-  }
-
-  const dateManager = DateManager.getInstance();
-  const sortedDates = item.completedDates.slice().sort();
-  const today = dateManager.isDevMode() 
-    ? new Date(dateManager.getCurrentDate()) 
-    : new Date();
-  
-  let consecutiveDays = 0;
-  let frozenStreaksEarned = 0;
-  let currentDate = new Date(today);
-
-  // Count consecutive 10-day periods without missing
-  while (currentDate >= new Date(sortedDates[0])) {
-    const dateStr = currentDate.toISOString().split('T')[0];
-    const dayOfWeek = currentDate.getDay();
-    
-    if (item.frequency.includes(dayOfWeek)) {
-      if (sortedDates.includes(dateStr)) {
-        consecutiveDays++;
-        
-        // Every 10 consecutive days earns a frozen streak (max 2)
-        if (consecutiveDays % 10 === 0 && frozenStreaksEarned < 2) {
-          frozenStreaksEarned++;
-        }
-      } else {
-        // Reset consecutive count if a day is missed
-        consecutiveDays = 0;
-      }
-    }
-    
-    currentDate.setDate(currentDate.getDate() - 1);
-  }
-
-  return Math.min(frozenStreaksEarned, 2);
-};
-
-// Calculate current streak and frozen streaks used for immediate reflection
-export const calculateCurrentStreakAndFrozenUsage = (item: HabitItem): { streak: number; frozenStreaksRemaining: number } => {
-  if (!item.completedDates || item.completedDates.length === 0) {
-    return { streak: 0, frozenStreaksRemaining: item.frozenStreaks || 0 };
-  }
-
-  const dateManager = DateManager.getInstance();
-  const sortedDates = item.completedDates.slice().sort();
   const currentDate = dateManager.getCurrentDate();
-  const today = new Date(currentDate);
   
   let streak = 0;
-  let checkDate = new Date(today);
+  let checkDate = new Date(currentDate);
   let frozenStreaksUsed = 0;
   const maxFrozenStreaks = item.frozenStreaks || 0;
-  let foundMissedDay = false;
 
   // Start from today and work backwards
   while (checkDate >= new Date(sortedDates[0])) {
@@ -110,10 +26,95 @@ export const calculateCurrentStreakAndFrozenUsage = (item: HabitItem): { streak:
         streak++;
       } else {
         // This is a missed day
-        foundMissedDay = true;
+        // Only break streak if this is a past day (not today)
+        if (dateStr < currentDate) {
+          // Check if they can use a frozen streak
+          if (frozenStreaksUsed < maxFrozenStreaks) {
+            frozenStreaksUsed++;
+            streak++; // Maintain streak using frozen streak
+          } else {
+            break; // Streak is broken
+          }
+        }
+        // If it's today and not completed yet, don't break the streak
+        // The streak continues until tomorrow if today is missed
+      }
+    }
+    
+    checkDate.setDate(checkDate.getDate() - 1);
+  }
+
+  return streak;
+};
+
+export const calculateFrozenStreaks = (item: HabitItem): number => {
+  if (!item.completedDates || item.completedDates.length === 0) {
+    return 0;
+  }
+
+  const dateManager = DateManager.getInstance();
+  const sortedDates = item.completedDates.slice().sort();
+  const currentDate = dateManager.getCurrentDate();
+  
+  let consecutiveDays = 0;
+  let frozenStreaksEarned = 0;
+  let checkDate = new Date(currentDate);
+
+  // Count consecutive 10-day periods without missing
+  while (checkDate >= new Date(sortedDates[0])) {
+    const dateStr = checkDate.toISOString().split('T')[0];
+    const dayOfWeek = checkDate.getDay();
+    
+    if (item.frequency.includes(dayOfWeek)) {
+      if (sortedDates.includes(dateStr)) {
+        consecutiveDays++;
         
-        // Only break streak if we've passed the current day
-        // (i.e., we're looking at yesterday or earlier)
+        // Every 10 consecutive days earns a frozen streak (max 2)
+        if (consecutiveDays % 10 === 0 && frozenStreaksEarned < 2) {
+          frozenStreaksEarned++;
+        }
+      } else {
+        // Only reset if this is a past day (not today)
+        if (dateStr < currentDate) {
+          consecutiveDays = 0;
+          frozenStreaksEarned = 0; // Reset frozen streaks when streak breaks
+        }
+      }
+    }
+    
+    checkDate.setDate(checkDate.getDate() - 1);
+  }
+
+  return Math.min(frozenStreaksEarned, 2);
+};
+
+// Calculate streak with frozen streak usage for display purposes
+export const calculateStreakWithFrozenUsage = (item: HabitItem): { streak: number; frozenStreaksRemaining: number } => {
+  if (!item.completedDates || item.completedDates.length === 0) {
+    return { streak: 0, frozenStreaksRemaining: item.frozenStreaks || 0 };
+  }
+
+  const dateManager = DateManager.getInstance();
+  const sortedDates = item.completedDates.slice().sort();
+  const currentDate = dateManager.getCurrentDate();
+  
+  let streak = 0;
+  let checkDate = new Date(currentDate);
+  let frozenStreaksUsed = 0;
+  const maxFrozenStreaks = item.frozenStreaks || 0;
+
+  // Start from today and work backwards
+  while (checkDate >= new Date(sortedDates[0])) {
+    const dateStr = checkDate.toISOString().split('T')[0];
+    const dayOfWeek = checkDate.getDay();
+    
+    // Check if this day is in the frequency
+    if (item.frequency.includes(dayOfWeek)) {
+      if (sortedDates.includes(dateStr)) {
+        streak++;
+      } else {
+        // This is a missed day
+        // Only count as missed if this is a past day (not today)
         if (dateStr < currentDate) {
           // Check if they can use a frozen streak
           if (frozenStreaksUsed < maxFrozenStreaks) {
