@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { X, Calendar, Gift, Clock, Zap } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Calendar, Gift, Clock, Zap, AlertCircle } from 'lucide-react';
 import { Ritual, HabitItem, TimeTrigger, HabitTrigger } from '../types';
+import { generateUniqueName, checkForDuplicateName } from '../utils/nameUtils';
 import TimePicker from './TimePicker';
 import HabitPicker from './HabitPicker';
 
@@ -9,15 +10,20 @@ interface CreateRitualProps {
   onClose: () => void;
   onSave: (ritual: Omit<Ritual, 'id' | 'createdAt'>) => void;
   existingHabits: HabitItem[];
+  existingRituals: Ritual[];
 }
 
 const CreateRitual: React.FC<CreateRitualProps> = ({ 
   isOpen, 
   onClose, 
   onSave, 
-  existingHabits 
+  existingHabits,
+  existingRituals
 }) => {
   const [name, setName] = useState('');
+  const [originalName, setOriginalName] = useState('');
+  const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
+  const [suggestedName, setSuggestedName] = useState('');
   const [triggerType, setTriggerType] = useState<'time' | 'habit'>('time');
   const [time, setTime] = useState('09:00');
   const [selectedHabit, setSelectedHabit] = useState<HabitItem | null>(null);
@@ -34,8 +40,43 @@ const CreateRitual: React.FC<CreateRitualProps> = ({
     { id: 6, name: 'Sat', full: 'Saturday' },
   ];
 
+  const allExistingItems = [...existingHabits, ...existingRituals];
+
+  useEffect(() => {
+    if (name.trim() && checkForDuplicateName(name, allExistingItems)) {
+      const suggested = generateUniqueName(name, allExistingItems);
+      setSuggestedName(suggested);
+      setShowDuplicateWarning(true);
+    } else {
+      setShowDuplicateWarning(false);
+      setSuggestedName('');
+    }
+  }, [name, allExistingItems]);
+
+  const handleNameChange = (value: string) => {
+    setName(value);
+    if (!originalName) {
+      setOriginalName(value);
+    }
+  };
+
+  const acceptSuggestedName = () => {
+    setName(suggestedName);
+    setOriginalName(suggestedName);
+    setShowDuplicateWarning(false);
+    setSuggestedName('');
+  };
+
   const handleSave = () => {
     if (!name.trim()) return;
+    
+    // Final check for duplicates
+    if (checkForDuplicateName(name, allExistingItems)) {
+      const suggested = generateUniqueName(name, allExistingItems);
+      setSuggestedName(suggested);
+      setShowDuplicateWarning(true);
+      return;
+    }
 
     let trigger: TimeTrigger | HabitTrigger;
     
@@ -68,6 +109,9 @@ const CreateRitual: React.FC<CreateRitualProps> = ({
 
   const resetForm = () => {
     setName('');
+    setOriginalName('');
+    setShowDuplicateWarning(false);
+    setSuggestedName('');
     setTriggerType('time');
     setTime('09:00');
     setSelectedHabit(null);
@@ -91,7 +135,10 @@ const CreateRitual: React.FC<CreateRitualProps> = ({
         <div className="flex items-center justify-between p-6 border-b">
           <h2 className="text-xl font-bold text-gray-900">Create New Ritual</h2>
           <button
-            onClick={onClose}
+            onClick={() => {
+              resetForm();
+              onClose();
+            }}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <X className="w-5 h-5 text-gray-500" />
@@ -107,10 +154,41 @@ const CreateRitual: React.FC<CreateRitualProps> = ({
             <input
               type="text"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => handleNameChange(e.target.value)}
               placeholder="e.g., Morning meditation"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             />
+            
+            {/* Duplicate Name Warning */}
+            {showDuplicateWarning && (
+              <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <div className="flex items-start space-x-2">
+                  <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm text-amber-800 mb-2">
+                      A ritual or habit with this name already exists.
+                    </p>
+                    <p className="text-sm text-amber-700 mb-3">
+                      Suggested name: <strong>{suggestedName}</strong>
+                    </p>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={acceptSuggestedName}
+                        className="px-3 py-1 bg-amber-600 text-white text-sm rounded hover:bg-amber-700 transition-colors"
+                      >
+                        Use Suggested Name
+                      </button>
+                      <button
+                        onClick={() => setShowDuplicateWarning(false)}
+                        className="px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded hover:bg-gray-300 transition-colors"
+                      >
+                        Keep Editing
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Trigger */}
@@ -195,14 +273,17 @@ const CreateRitual: React.FC<CreateRitualProps> = ({
 
         <div className="flex space-x-3 p-6 border-t">
           <button
-            onClick={onClose}
+            onClick={() => {
+              resetForm();
+              onClose();
+            }}
             className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
-            disabled={!name.trim() || (triggerType === 'habit' && !selectedHabit)}
+            disabled={!name.trim() || (triggerType === 'habit' && !selectedHabit) || showDuplicateWarning}
             className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             Create Ritual

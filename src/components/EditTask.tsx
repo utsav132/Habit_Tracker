@@ -1,28 +1,66 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar } from 'lucide-react';
+import { X, Calendar, AlertCircle } from 'lucide-react';
 import { Task } from '../types';
 import { getCurrentDate, getTomorrowDate, formatDate } from '../utils/storage';
+import { generateUniqueName, checkForDuplicateName } from '../utils/nameUtils';
 
 interface EditTaskProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (task: Task) => void;
   task: Task | null;
+  existingTasks: Task[];
 }
 
-const EditTask: React.FC<EditTaskProps> = ({ isOpen, onClose, onSave, task }) => {
+const EditTask: React.FC<EditTaskProps> = ({ isOpen, onClose, onSave, task, existingTasks }) => {
   const [name, setName] = useState('');
+  const [originalName, setOriginalName] = useState('');
+  const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
+  const [suggestedName, setSuggestedName] = useState('');
   const [date, setDate] = useState(getCurrentDate());
+
+  // Exclude the current task from duplicate checking
+  const otherTasks = existingTasks.filter(t => t.id !== task?.id);
 
   useEffect(() => {
     if (task) {
       setName(task.name);
+      setOriginalName(task.name);
       setDate(task.date);
     }
   }, [task]);
 
+  useEffect(() => {
+    if (name.trim() && name !== originalName && checkForDuplicateName(name, otherTasks)) {
+      const suggested = generateUniqueName(name, otherTasks);
+      setSuggestedName(suggested);
+      setShowDuplicateWarning(true);
+    } else {
+      setShowDuplicateWarning(false);
+      setSuggestedName('');
+    }
+  }, [name, originalName, otherTasks]);
+
+  const handleNameChange = (value: string) => {
+    setName(value);
+  };
+
+  const acceptSuggestedName = () => {
+    setName(suggestedName);
+    setShowDuplicateWarning(false);
+    setSuggestedName('');
+  };
+
   const handleSave = () => {
     if (!name.trim() || !task) return;
+
+    // Final check for duplicates (excluding current task)
+    if (name !== originalName && checkForDuplicateName(name, otherTasks)) {
+      const suggested = generateUniqueName(name, otherTasks);
+      setSuggestedName(suggested);
+      setShowDuplicateWarning(true);
+      return;
+    }
 
     const updatedTask: Task = {
       ...task,
@@ -57,11 +95,42 @@ const EditTask: React.FC<EditTaskProps> = ({ isOpen, onClose, onSave, task }) =>
             <input
               type="text"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => handleNameChange(e.target.value)}
               placeholder="e.g., Buy groceries"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               autoFocus
             />
+            
+            {/* Duplicate Name Warning */}
+            {showDuplicateWarning && (
+              <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <div className="flex items-start space-x-2">
+                  <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm text-amber-800 mb-2">
+                      A task with this name already exists.
+                    </p>
+                    <p className="text-sm text-amber-700 mb-3">
+                      Suggested name: <strong>{suggestedName}</strong>
+                    </p>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={acceptSuggestedName}
+                        className="px-3 py-1 bg-amber-600 text-white text-sm rounded hover:bg-amber-700 transition-colors"
+                      >
+                        Use Suggested Name
+                      </button>
+                      <button
+                        onClick={() => setShowDuplicateWarning(false)}
+                        className="px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded hover:bg-gray-300 transition-colors"
+                      >
+                        Keep Editing
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div>
@@ -109,7 +178,7 @@ const EditTask: React.FC<EditTaskProps> = ({ isOpen, onClose, onSave, task }) =>
           </button>
           <button
             onClick={handleSave}
-            disabled={!name.trim()}
+            disabled={!name.trim() || showDuplicateWarning}
             className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             Save Changes

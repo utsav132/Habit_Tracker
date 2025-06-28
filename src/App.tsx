@@ -396,12 +396,14 @@ function App() {
         onClose={() => setIsCreateRitualOpen(false)}
         onSave={handleCreateRitual}
         existingHabits={allHabits}
+        existingRituals={data.rituals}
       />
 
       <CreateTask
         isOpen={isCreateTaskOpen}
         onClose={() => setIsCreateTaskOpen(false)}
         onSave={handleCreateTask}
+        existingTasks={data.tasks}
       />
 
       <EditRitual
@@ -410,6 +412,7 @@ function App() {
         onSave={handleSaveEditedRitual}
         ritual={editingRitual}
         existingHabits={allHabits}
+        existingRituals={data.rituals}
       />
 
       <EditTask
@@ -417,6 +420,7 @@ function App() {
         onClose={() => setIsEditTaskOpen(false)}
         onSave={handleSaveEditedTask}
         task={editingTask}
+        existingTasks={data.tasks}
       />
     </div>
   );

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, Gift, Clock, Zap } from 'lucide-react';
+import { X, Calendar, Gift, Clock, Zap, AlertCircle } from 'lucide-react';
 import { Ritual, HabitItem, TimeTrigger, HabitTrigger } from '../types';
+import { generateUniqueName, checkForDuplicateName } from '../utils/nameUtils';
 import TimePicker from './TimePicker';
 import HabitPicker from './HabitPicker';
 
@@ -10,6 +11,7 @@ interface EditRitualProps {
   onSave: (ritual: Ritual) => void;
   ritual: Ritual | null;
   existingHabits: HabitItem[];
+  existingRituals: Ritual[];
 }
 
 const EditRitual: React.FC<EditRitualProps> = ({ 
@@ -17,9 +19,13 @@ const EditRitual: React.FC<EditRitualProps> = ({
   onClose, 
   onSave, 
   ritual,
-  existingHabits 
+  existingHabits,
+  existingRituals
 }) => {
   const [name, setName] = useState('');
+  const [originalName, setOriginalName] = useState('');
+  const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
+  const [suggestedName, setSuggestedName] = useState('');
   const [triggerType, setTriggerType] = useState<'time' | 'habit'>('time');
   const [time, setTime] = useState('09:00');
   const [selectedHabit, setSelectedHabit] = useState<HabitItem | null>(null);
@@ -36,9 +42,16 @@ const EditRitual: React.FC<EditRitualProps> = ({
     { id: 6, name: 'Sat', full: 'Saturday' },
   ];
 
+  // Exclude the current ritual from duplicate checking
+  const allExistingItems = [
+    ...existingHabits, 
+    ...existingRituals.filter(r => r.id !== ritual?.id)
+  ];
+
   useEffect(() => {
     if (ritual) {
       setName(ritual.name);
+      setOriginalName(ritual.name);
       setTriggerType(ritual.trigger.type);
       if (ritual.trigger.type === 'time') {
         setTime(ritual.trigger.time);
@@ -51,8 +64,37 @@ const EditRitual: React.FC<EditRitualProps> = ({
     }
   }, [ritual, existingHabits]);
 
+  useEffect(() => {
+    if (name.trim() && name !== originalName && checkForDuplicateName(name, allExistingItems)) {
+      const suggested = generateUniqueName(name, allExistingItems);
+      setSuggestedName(suggested);
+      setShowDuplicateWarning(true);
+    } else {
+      setShowDuplicateWarning(false);
+      setSuggestedName('');
+    }
+  }, [name, originalName, allExistingItems]);
+
+  const handleNameChange = (value: string) => {
+    setName(value);
+  };
+
+  const acceptSuggestedName = () => {
+    setName(suggestedName);
+    setShowDuplicateWarning(false);
+    setSuggestedName('');
+  };
+
   const handleSave = () => {
     if (!name.trim() || !ritual) return;
+
+    // Final check for duplicates (excluding current ritual)
+    if (name !== originalName && checkForDuplicateName(name, allExistingItems)) {
+      const suggested = generateUniqueName(name, allExistingItems);
+      setSuggestedName(suggested);
+      setShowDuplicateWarning(true);
+      return;
+    }
 
     let trigger: TimeTrigger | HabitTrigger;
     
@@ -111,10 +153,41 @@ const EditRitual: React.FC<EditRitualProps> = ({
             <input
               type="text"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => handleNameChange(e.target.value)}
               placeholder="e.g., Morning meditation"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             />
+            
+            {/* Duplicate Name Warning */}
+            {showDuplicateWarning && (
+              <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <div className="flex items-start space-x-2">
+                  <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm text-amber-800 mb-2">
+                      A ritual or habit with this name already exists.
+                    </p>
+                    <p className="text-sm text-amber-700 mb-3">
+                      Suggested name: <strong>{suggestedName}</strong>
+                    </p>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={acceptSuggestedName}
+                        className="px-3 py-1 bg-amber-600 text-white text-sm rounded hover:bg-amber-700 transition-colors"
+                      >
+                        Use Suggested Name
+                      </button>
+                      <button
+                        onClick={() => setShowDuplicateWarning(false)}
+                        className="px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded hover:bg-gray-300 transition-colors"
+                      >
+                        Keep Editing
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Trigger */}
@@ -206,7 +279,7 @@ const EditRitual: React.FC<EditRitualProps> = ({
           </button>
           <button
             onClick={handleSave}
-            disabled={!name.trim() || (triggerType === 'habit' && !selectedHabit)}
+            disabled={!name.trim() || (triggerType === 'habit' && !selectedHabit) || showDuplicateWarning}
             className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             Save Changes
