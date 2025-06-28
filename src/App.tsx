@@ -3,7 +3,7 @@ import { Calendar, Zap, Crown, Trophy, Settings, ChevronRight, ChevronLeft } fro
 import { AppData, Ritual, Habit, Task, HabitItem } from './types';
 import { getStoredData, saveData } from './utils/storage';
 import { DateManager } from './utils/dateUtils';
-import { calculateStreak, shouldPromoteToHabit, shouldDemoteToRitual } from './utils/streaks';
+import { calculateStreak, calculateFrozenStreaks, shouldPromoteToHabit, shouldDemoteToRitual } from './utils/streaks';
 import { checkAchievements } from './utils/achievements';
 import { NotificationManager } from './utils/notifications';
 import Rituals from './components/Rituals';
@@ -14,6 +14,7 @@ import CreateRitual from './components/CreateRitual';
 import CreateTask from './components/CreateTask';
 import EditRitual from './components/EditRitual';
 import EditTask from './components/EditTask';
+import EditHabit from './components/EditHabit';
 import ConfettiAnimation from './components/ConfettiAnimation';
 
 type TabType = 'rituals' | 'tasks' | 'habits' | 'achievements';
@@ -25,8 +26,10 @@ function App() {
   const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
   const [isEditRitualOpen, setIsEditRitualOpen] = useState(false);
   const [isEditTaskOpen, setIsEditTaskOpen] = useState(false);
+  const [isEditHabitOpen, setIsEditHabitOpen] = useState(false);
   const [editingRitual, setEditingRitual] = useState<Ritual | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
   const [rewardMessage, setRewardMessage] = useState<string>('');
   const [devMode, setDevMode] = useState(false);
@@ -106,6 +109,7 @@ function App() {
       ...ritualData,
       id: generateId(),
       createdAt: dateManager.getCurrentDate(),
+      frozenStreaks: 0,
     };
 
     setData(prev => ({
@@ -173,6 +177,28 @@ function App() {
     }));
   };
 
+  const handleEditHabit = (habit: Habit) => {
+    setEditingHabit(habit);
+    setIsEditHabitOpen(true);
+  };
+
+  const handleSaveEditedHabit = (updatedHabit: Habit) => {
+    setData(prev => ({
+      ...prev,
+      habits: prev.habits.map(h => h.id === updatedHabit.id ? updatedHabit : h),
+    }));
+    setIsEditHabitOpen(false);
+    setEditingHabit(null);
+  };
+
+  const handleDeleteHabit = (habitId: string) => {
+    notificationManager.clearNotification(habitId);
+    setData(prev => ({
+      ...prev,
+      habits: prev.habits.filter(h => h.id !== habitId),
+    }));
+  };
+
   const handleCompleteRitual = (ritualId: string) => {
     setData(prev => {
       const ritual = prev.rituals.find(r => r.id === ritualId);
@@ -184,12 +210,17 @@ function App() {
         ...ritual,
         completedDates: updatedCompletedDates,
       });
+      const newFrozenStreaks = calculateFrozenStreaks({
+        ...ritual,
+        completedDates: updatedCompletedDates,
+      });
 
       const updatedRitual: Ritual = {
         ...ritual,
         lastCompleted: today,
         completedDates: updatedCompletedDates,
         streak: newStreak,
+        frozenStreaks: newFrozenStreaks,
       };
 
       let updatedRituals = prev.rituals.map(r => r.id === ritualId ? updatedRitual : r);
@@ -251,12 +282,17 @@ function App() {
         ...habit,
         completedDates: updatedCompletedDates,
       });
+      const newFrozenStreaks = calculateFrozenStreaks({
+        ...habit,
+        completedDates: updatedCompletedDates,
+      });
 
       const updatedHabit: Habit = {
         ...habit,
         lastCompleted: today,
         completedDates: updatedCompletedDates,
         streak: newStreak,
+        frozenStreaks: newFrozenStreaks,
       };
 
       let updatedHabits = prev.habits.map(h => h.id === habitId ? updatedHabit : h);
@@ -449,6 +485,8 @@ function App() {
               <Habits
                 habits={data.habits}
                 onCompleteHabit={handleCompleteHabit}
+                onEditHabit={handleEditHabit}
+                onDeleteHabit={handleDeleteHabit}
               />
             )}
             {activeTab === 'achievements' && (
@@ -489,6 +527,15 @@ function App() {
         onSave={handleSaveEditedTask}
         task={editingTask}
         existingTasks={data.tasks}
+      />
+
+      <EditHabit
+        isOpen={isEditHabitOpen}
+        onClose={() => setIsEditHabitOpen(false)}
+        onSave={handleSaveEditedHabit}
+        habit={editingHabit}
+        existingHabits={allHabits}
+        existingRituals={data.rituals}
       />
     </div>
   );

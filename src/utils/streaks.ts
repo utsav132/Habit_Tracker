@@ -13,6 +13,8 @@ export const calculateStreak = (item: HabitItem): number => {
     : new Date();
   let streak = 0;
   let currentDate = new Date(today);
+  let frozenStreaksUsed = 0;
+  const maxFrozenStreaks = item.frozenStreaks || 0;
 
   // Start from today and work backwards
   while (currentDate >= new Date(sortedDates[0])) {
@@ -24,12 +26,12 @@ export const calculateStreak = (item: HabitItem): number => {
       if (sortedDates.includes(dateStr)) {
         streak++;
       } else {
-        // Check if they can use a skip
-        if (streak >= 10 && !item.skipUsed) {
-          // They can skip this day
-          streak++;
+        // Check if they can use a frozen streak
+        if (frozenStreaksUsed < maxFrozenStreaks) {
+          frozenStreaksUsed++;
+          streak++; // Maintain streak using frozen streak
         } else {
-          break;
+          break; // Streak is broken
         }
       }
     }
@@ -38,6 +40,46 @@ export const calculateStreak = (item: HabitItem): number => {
   }
 
   return streak;
+};
+
+export const calculateFrozenStreaks = (item: HabitItem): number => {
+  if (!item.completedDates || item.completedDates.length === 0) {
+    return 0;
+  }
+
+  const dateManager = DateManager.getInstance();
+  const sortedDates = item.completedDates.slice().sort();
+  const today = dateManager.isDevMode() 
+    ? new Date(dateManager.getCurrentDate()) 
+    : new Date();
+  
+  let consecutiveDays = 0;
+  let frozenStreaksEarned = 0;
+  let currentDate = new Date(today);
+
+  // Count consecutive 10-day periods without missing
+  while (currentDate >= new Date(sortedDates[0])) {
+    const dateStr = currentDate.toISOString().split('T')[0];
+    const dayOfWeek = currentDate.getDay();
+    
+    if (item.frequency.includes(dayOfWeek)) {
+      if (sortedDates.includes(dateStr)) {
+        consecutiveDays++;
+        
+        // Every 10 consecutive days earns a frozen streak (max 2)
+        if (consecutiveDays % 10 === 0 && frozenStreaksEarned < 2) {
+          frozenStreaksEarned++;
+        }
+      } else {
+        // Reset consecutive count if a day is missed
+        consecutiveDays = 0;
+      }
+    }
+    
+    currentDate.setDate(currentDate.getDate() - 1);
+  }
+
+  return Math.min(frozenStreaksEarned, 2);
 };
 
 export const shouldPromoteToHabit = (ritual: Ritual): boolean => {

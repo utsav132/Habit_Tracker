@@ -1,5 +1,5 @@
-import React from 'react';
-import { Crown, Flame, Gift, Calendar, Clock, Zap } from 'lucide-react';
+import React, { useState } from 'react';
+import { Crown, Flame, Gift, Calendar, Clock, Zap, Edit, Trash2, MoreVertical, Shield } from 'lucide-react';
 import { Habit } from '../types';
 import { getTodaysScheduledItems } from '../utils/streaks';
 import { getCurrentDate } from '../utils/storage';
@@ -7,9 +7,13 @@ import { getCurrentDate } from '../utils/storage';
 interface HabitsProps {
   habits: Habit[];
   onCompleteHabit: (habitId: string) => void;
+  onEditHabit: (habit: Habit) => void;
+  onDeleteHabit: (habitId: string) => void;
 }
 
-const Habits: React.FC<HabitsProps> = ({ habits, onCompleteHabit }) => {
+const Habits: React.FC<HabitsProps> = ({ habits, onCompleteHabit, onEditHabit, onDeleteHabit }) => {
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  
   const todaysHabits = getTodaysScheduledItems(habits);
   const completedToday = todaysHabits.filter(habit => 
     habit.lastCompleted === getCurrentDate()
@@ -41,6 +45,25 @@ const Habits: React.FC<HabitsProps> = ({ habits, onCompleteHabit }) => {
       (new Date().getTime() - new Date(becameHabitAt).getTime()) / 
       (1000 * 60 * 60 * 24)
     );
+  };
+
+  const handleMenuClick = (habitId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setOpenMenuId(openMenuId === habitId ? null : habitId);
+  };
+
+  const handleEdit = (habit: Habit, e: React.MouseEvent) => {
+    e.stopPropagation();
+    onEditHabit(habit);
+    setOpenMenuId(null);
+  };
+
+  const handleDelete = (habitId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (confirm('Are you sure you want to delete this habit?')) {
+      onDeleteHabit(habitId);
+    }
+    setOpenMenuId(null);
   };
 
   return (
@@ -104,7 +127,7 @@ const Habits: React.FC<HabitsProps> = ({ habits, onCompleteHabit }) => {
               return (
                 <div
                   key={habit.id}
-                  className={`bg-white rounded-xl p-4 border-2 transition-all hover:shadow-lg ${
+                  className={`bg-white rounded-xl p-4 border-2 transition-all hover:shadow-lg relative ${
                     isCompletedToday
                       ? 'border-green-200 bg-green-50'
                       : isScheduledToday
@@ -121,6 +144,12 @@ const Habits: React.FC<HabitsProps> = ({ habits, onCompleteHabit }) => {
                           <Flame className="w-3 h-3" />
                           <span>{habit.streak}</span>
                         </div>
+                        {habit.frozenStreaks > 0 && (
+                          <div className="flex items-center space-x-1 bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs">
+                            <Shield className="w-3 h-3" />
+                            <span>{habit.frozenStreaks}</span>
+                          </div>
+                        )}
                       </div>
 
                       <div className="space-y-1 text-sm text-gray-600 mb-2">
@@ -151,26 +180,58 @@ const Habits: React.FC<HabitsProps> = ({ habits, onCompleteHabit }) => {
                       )}
                     </div>
 
-                    {canComplete && (
-                      <button
-                        onClick={() => onCompleteHabit(habit.id)}
-                        className="ml-4 bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors text-sm font-medium"
-                      >
-                        Complete
-                      </button>
-                    )}
+                    <div className="flex items-center space-x-2 ml-4">
+                      {canComplete && (
+                        <button
+                          onClick={() => onCompleteHabit(habit.id)}
+                          className="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors text-sm font-medium"
+                        >
+                          Complete
+                        </button>
+                      )}
 
-                    {isCompletedToday && (
-                      <div className="ml-4 bg-green-100 text-green-700 px-4 py-2 rounded-lg text-sm font-medium">
-                        Completed ✓
-                      </div>
-                    )}
+                      {isCompletedToday && (
+                        <div className="bg-green-100 text-green-700 px-4 py-2 rounded-lg text-sm font-medium">
+                          Completed ✓
+                        </div>
+                      )}
 
-                    {!isScheduledToday && (
-                      <div className="ml-4 text-gray-400 text-sm">
-                        Not scheduled
+                      {!isScheduledToday && (
+                        <div className="text-gray-400 text-sm">
+                          Not scheduled
+                        </div>
+                      )}
+
+                      {/* Menu Button */}
+                      <div className="relative">
+                        <button
+                          onClick={(e) => handleMenuClick(habit.id, e)}
+                          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                        >
+                          <MoreVertical className="w-4 h-4 text-gray-500" />
+                        </button>
+
+                        {/* Dropdown Menu */}
+                        {openMenuId === habit.id && (
+                          <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border py-1 z-10 min-w-[120px]">
+                            <button
+                              onClick={(e) => handleEdit(habit, e)}
+                              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2"
+                            >
+                              <Edit className="w-4 h-4" />
+                              <span>Edit</span>
+                            </button>
+                            <button
+                              onClick={(e) => handleDelete(habit.id, e)}
+                              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2 text-red-600"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              <span>Delete</span>
+                            </button>
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </div>
                   </div>
                 </div>
               );
@@ -178,6 +239,14 @@ const Habits: React.FC<HabitsProps> = ({ habits, onCompleteHabit }) => {
           </div>
         )}
       </div>
+
+      {/* Click outside to close menu */}
+      {openMenuId && (
+        <div
+          className="fixed inset-0 z-5"
+          onClick={() => setOpenMenuId(null)}
+        />
+      )}
     </div>
   );
 };

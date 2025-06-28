@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Clock, Zap, Flame, Gift, Calendar, Edit, Trash2, MoreVertical } from 'lucide-react';
+import { Plus, Clock, Zap, Flame, Gift, Calendar, Edit, Trash2, MoreVertical, Shield } from 'lucide-react';
 import { Ritual, HabitItem } from '../types';
 import { getTodaysScheduledItems } from '../utils/streaks';
 import { getCurrentDate } from '../utils/storage';
@@ -148,6 +148,12 @@ const Rituals: React.FC<RitualsProps> = ({
                           <div className="flex items-center space-x-1 bg-orange-100 text-orange-700 px-2 py-1 rounded-full text-xs">
                             <Flame className="w-3 h-3" />
                             <span>{ritual.streak}</span>
+                          </div>
+                        )}
+                        {ritual.frozenStreaks > 0 && (
+                          <div className="flex items-center space-x-1 bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs">
+                            <Shield className="w-3 h-3" />
+                            <span>{ritual.frozenStreaks}</span>
                           </div>
                         )}
                       </div>

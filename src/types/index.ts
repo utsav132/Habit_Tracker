@@ -20,6 +20,7 @@ export interface BaseHabit {
   skipUsed: boolean;
   createdAt: string;
   completedDates: string[]; // Array of YYYY-MM-DD strings
+  frozenStreaks: number; // Number of frozen streaks available (max 2)
 }
 
 export interface Ritual extends BaseHabit {
