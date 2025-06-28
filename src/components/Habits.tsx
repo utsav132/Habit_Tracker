@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Crown, Flame, Gift, Calendar, Clock, Zap, Edit, Trash2, MoreVertical, Shield } from 'lucide-react';
 import { Habit } from '../types';
-import { getTodaysScheduledItems } from '../utils/streaks';
+import { getTodaysScheduledItems, calculateCurrentStreakAndFrozenUsage } from '../utils/streaks';
 import { getCurrentDate } from '../utils/storage';
 
 interface HabitsProps {
@@ -13,11 +13,25 @@ interface HabitsProps {
 
 const Habits: React.FC<HabitsProps> = ({ habits, onCompleteHabit, onEditHabit, onDeleteHabit }) => {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [habitsWithCurrentStats, setHabitsWithCurrentStats] = useState<(Habit & { currentStreak: number; currentFrozenStreaks: number })[]>([]);
   
   const todaysHabits = getTodaysScheduledItems(habits);
   const completedToday = todaysHabits.filter(habit => 
     habit.lastCompleted === getCurrentDate()
   ).length;
+
+  // Update habits with current streak and frozen streak stats
+  useEffect(() => {
+    const updatedHabits = habits.map(habit => {
+      const { streak, frozenStreaksRemaining } = calculateCurrentStreakAndFrozenUsage(habit);
+      return {
+        ...habit,
+        currentStreak: streak,
+        currentFrozenStreaks: frozenStreaksRemaining
+      };
+    });
+    setHabitsWithCurrentStats(updatedHabits);
+  }, [habits]);
 
   const formatTrigger = (trigger: Habit['trigger']) => {
     if (trigger.type === 'time') {
@@ -118,7 +132,7 @@ const Habits: React.FC<HabitsProps> = ({ habits, onCompleteHabit, onEditHabit, o
           </div>
         ) : (
           <div className="space-y-4">
-            {habits.map((habit) => {
+            {habitsWithCurrentStats.map((habit) => {
               const isScheduledToday = habit.frequency.includes(new Date().getDay());
               const isCompletedToday = habit.lastCompleted === getCurrentDate();
               const canComplete = isScheduledToday && !isCompletedToday;
@@ -142,12 +156,12 @@ const Habits: React.FC<HabitsProps> = ({ habits, onCompleteHabit, onEditHabit, o
                         <h3 className="text-lg font-semibold text-gray-900">{habit.name}</h3>
                         <div className="flex items-center space-x-1 bg-orange-100 text-orange-700 px-2 py-1 rounded-full text-xs">
                           <Flame className="w-3 h-3" />
-                          <span>{habit.streak}</span>
+                          <span>{habit.currentStreak}</span>
                         </div>
-                        {habit.frozenStreaks > 0 && (
+                        {habit.currentFrozenStreaks > 0 && (
                           <div className="flex items-center space-x-1 bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs">
                             <Shield className="w-3 h-3" />
-                            <span>{habit.frozenStreaks}</span>
+                            <span>{habit.currentFrozenStreaks}</span>
                           </div>
                         )}
                       </div>

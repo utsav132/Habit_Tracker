@@ -82,6 +82,51 @@ export const calculateFrozenStreaks = (item: HabitItem): number => {
   return Math.min(frozenStreaksEarned, 2);
 };
 
+// Calculate current streak and frozen streaks used for immediate reflection
+export const calculateCurrentStreakAndFrozenUsage = (item: HabitItem): { streak: number; frozenStreaksRemaining: number } => {
+  if (!item.completedDates || item.completedDates.length === 0) {
+    return { streak: 0, frozenStreaksRemaining: item.frozenStreaks || 0 };
+  }
+
+  const dateManager = DateManager.getInstance();
+  const sortedDates = item.completedDates.slice().sort();
+  const today = dateManager.isDevMode() 
+    ? new Date(dateManager.getCurrentDate()) 
+    : new Date();
+  let streak = 0;
+  let currentDate = new Date(today);
+  let frozenStreaksUsed = 0;
+  const maxFrozenStreaks = item.frozenStreaks || 0;
+
+  // Start from today and work backwards
+  while (currentDate >= new Date(sortedDates[0])) {
+    const dateStr = currentDate.toISOString().split('T')[0];
+    const dayOfWeek = currentDate.getDay();
+    
+    // Check if this day is in the frequency
+    if (item.frequency.includes(dayOfWeek)) {
+      if (sortedDates.includes(dateStr)) {
+        streak++;
+      } else {
+        // Check if they can use a frozen streak
+        if (frozenStreaksUsed < maxFrozenStreaks) {
+          frozenStreaksUsed++;
+          streak++; // Maintain streak using frozen streak
+        } else {
+          break; // Streak is broken
+        }
+      }
+    }
+    
+    currentDate.setDate(currentDate.getDate() - 1);
+  }
+
+  return { 
+    streak, 
+    frozenStreaksRemaining: Math.max(0, maxFrozenStreaks - frozenStreaksUsed) 
+  };
+};
+
 export const shouldPromoteToHabit = (ritual: Ritual): boolean => {
   return ritual.streak >= 60;
 };
@@ -110,4 +155,10 @@ export const getTodaysScheduledItems = (items: HabitItem[]): HabitItem[] => {
   const dateManager = DateManager.getInstance();
   const today = dateManager.getCurrentDayOfWeek();
   return items.filter(item => item.frequency.includes(today));
+};
+
+export const getOtherItems = (items: HabitItem[]): HabitItem[] => {
+  const dateManager = DateManager.getInstance();
+  const today = dateManager.getCurrentDayOfWeek();
+  return items.filter(item => !item.frequency.includes(today));
 };
