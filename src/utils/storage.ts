@@ -95,31 +95,5 @@ export const saveData = (data: AppData): void => {
   }
 };
 
-export const getCurrentDate = (): string => {
-  return new Date().toISOString().split('T')[0];
-};
-
-export const getYesterdayDate = (): string => {
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  return yesterday.toISOString().split('T')[0];
-};
-
-export const getTomorrowDate = (): string => {
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  return tomorrow.toISOString().split('T')[0];
-};
-
-export const isToday = (dateString: string): boolean => {
-  return dateString === getCurrentDate();
-};
-
-export const formatDate = (dateString: string): string => {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', { 
-    weekday: 'short', 
-    month: 'short', 
-    day: 'numeric' 
-  });
-};
+// Re-export from dateUtils for backward compatibility
+export { getCurrentDate, getYesterdayDate, getTomorrowDate, isToday, formatDate } from './dateUtils';

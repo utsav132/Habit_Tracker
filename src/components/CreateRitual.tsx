@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { X, Calendar, Gift, Clock, Zap, AlertCircle } from 'lucide-react';
 import { Ritual, HabitItem, TimeTrigger, HabitTrigger } from '../types';
 import { generateUniqueName, checkForDuplicateName } from '../utils/nameUtils';
@@ -21,7 +21,6 @@ const CreateRitual: React.FC<CreateRitualProps> = ({
   existingRituals
 }) => {
   const [name, setName] = useState('');
-  const [originalName, setOriginalName] = useState('');
   const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
   const [suggestedName, setSuggestedName] = useState('');
   const [triggerType, setTriggerType] = useState<'time' | 'habit'>('time');
@@ -42,27 +41,8 @@ const CreateRitual: React.FC<CreateRitualProps> = ({
 
   const allExistingItems = [...existingHabits, ...existingRituals];
 
-  useEffect(() => {
-    if (name.trim() && checkForDuplicateName(name, allExistingItems)) {
-      const suggested = generateUniqueName(name, allExistingItems);
-      setSuggestedName(suggested);
-      setShowDuplicateWarning(true);
-    } else {
-      setShowDuplicateWarning(false);
-      setSuggestedName('');
-    }
-  }, [name, allExistingItems]);
-
-  const handleNameChange = (value: string) => {
-    setName(value);
-    if (!originalName) {
-      setOriginalName(value);
-    }
-  };
-
   const acceptSuggestedName = () => {
     setName(suggestedName);
-    setOriginalName(suggestedName);
     setShowDuplicateWarning(false);
     setSuggestedName('');
   };
@@ -70,7 +50,7 @@ const CreateRitual: React.FC<CreateRitualProps> = ({
   const handleSave = () => {
     if (!name.trim()) return;
     
-    // Final check for duplicates
+    // Check for duplicates on save
     if (checkForDuplicateName(name, allExistingItems)) {
       const suggested = generateUniqueName(name, allExistingItems);
       setSuggestedName(suggested);
@@ -109,7 +89,6 @@ const CreateRitual: React.FC<CreateRitualProps> = ({
 
   const resetForm = () => {
     setName('');
-    setOriginalName('');
     setShowDuplicateWarning(false);
     setSuggestedName('');
     setTriggerType('time');
@@ -154,9 +133,10 @@ const CreateRitual: React.FC<CreateRitualProps> = ({
             <input
               type="text"
               value={name}
-              onChange={(e) => handleNameChange(e.target.value)}
+              onChange={(e) => setName(e.target.value)}
               placeholder="e.g., Morning meditation"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              autoFocus
             />
             
             {/* Duplicate Name Warning */}
@@ -283,7 +263,7 @@ const CreateRitual: React.FC<CreateRitualProps> = ({
           </button>
           <button
             onClick={handleSave}
-            disabled={!name.trim() || (triggerType === 'habit' && !selectedHabit) || showDuplicateWarning}
+            disabled={!name.trim() || (triggerType === 'habit' && !selectedHabit)}
             className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             Create Ritual

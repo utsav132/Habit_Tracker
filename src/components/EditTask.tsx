@@ -30,21 +30,6 @@ const EditTask: React.FC<EditTaskProps> = ({ isOpen, onClose, onSave, task, exis
     }
   }, [task]);
 
-  useEffect(() => {
-    if (name.trim() && name !== originalName && checkForDuplicateName(name, otherTasks)) {
-      const suggested = generateUniqueName(name, otherTasks);
-      setSuggestedName(suggested);
-      setShowDuplicateWarning(true);
-    } else {
-      setShowDuplicateWarning(false);
-      setSuggestedName('');
-    }
-  }, [name, originalName, otherTasks]);
-
-  const handleNameChange = (value: string) => {
-    setName(value);
-  };
-
   const acceptSuggestedName = () => {
     setName(suggestedName);
     setShowDuplicateWarning(false);
@@ -54,7 +39,7 @@ const EditTask: React.FC<EditTaskProps> = ({ isOpen, onClose, onSave, task, exis
   const handleSave = () => {
     if (!name.trim() || !task) return;
 
-    // Final check for duplicates (excluding current task)
+    // Check for duplicates on save (excluding current task)
     if (name !== originalName && checkForDuplicateName(name, otherTasks)) {
       const suggested = generateUniqueName(name, otherTasks);
       setSuggestedName(suggested);
@@ -95,7 +80,7 @@ const EditTask: React.FC<EditTaskProps> = ({ isOpen, onClose, onSave, task, exis
             <input
               type="text"
               value={name}
-              onChange={(e) => handleNameChange(e.target.value)}
+              onChange={(e) => setName(e.target.value)}
               placeholder="e.g., Buy groceries"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               autoFocus
@@ -178,7 +163,7 @@ const EditTask: React.FC<EditTaskProps> = ({ isOpen, onClose, onSave, task, exis
           </button>
           <button
             onClick={handleSave}
-            disabled={!name.trim() || showDuplicateWarning}
+            disabled={!name.trim()}
             className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             Save Changes

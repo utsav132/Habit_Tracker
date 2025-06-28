@@ -1,20 +1,24 @@
 import { AppData, Achievement, HabitItem } from '../types';
-import { getCurrentDate, getYesterdayDate } from './storage';
+import { DateManager } from './dateUtils';
 
 export const checkAchievements = (data: AppData): Achievement[] => {
+  const dateManager = DateManager.getInstance();
+  const currentDate = dateManager.getCurrentDate();
+  const yesterdayDate = dateManager.getYesterdayDate();
+
   const updatedAchievements = data.achievements.map(achievement => {
     if (achievement.unlocked) return achievement;
 
     switch (achievement.id) {
       case 'start-ritual':
         if (data.rituals.length > 0) {
-          return { ...achievement, unlocked: true, unlockedAt: getCurrentDate() };
+          return { ...achievement, unlocked: true, unlockedAt: currentDate };
         }
         break;
 
       case 'ritual-to-habit':
         if (data.habits.length > 0) {
-          return { ...achievement, unlocked: true, unlockedAt: getCurrentDate() };
+          return { ...achievement, unlocked: true, unlockedAt: currentDate };
         }
         break;
 
@@ -27,44 +31,42 @@ export const checkAchievements = (data: AppData): Achievement[] => {
           return daysSinceBecame >= 90;
         });
         if (hasThreeMonthHabit) {
-          return { ...achievement, unlocked: true, unlockedAt: getCurrentDate() };
+          return { ...achievement, unlocked: true, unlockedAt: currentDate };
         }
         break;
 
       case 'five-habits':
         if (data.habits.length >= 5) {
-          return { ...achievement, unlocked: true, unlockedAt: getCurrentDate() };
+          return { ...achievement, unlocked: true, unlockedAt: currentDate };
         }
         break;
 
       case 'complete-task':
         if (data.tasks.some(task => task.completed)) {
-          return { ...achievement, unlocked: true, unlockedAt: getCurrentDate() };
+          return { ...achievement, unlocked: true, unlockedAt: currentDate };
         }
         break;
 
       case 'complete-all-tasks':
         // Check if all tasks were completed yesterday (to avoid same-day additions)
-        const yesterday = getYesterdayDate();
-        const yesterdaysTasks = data.tasks.filter(task => task.date === yesterday);
+        const yesterdaysTasks = data.tasks.filter(task => task.date === yesterdayDate);
         if (yesterdaysTasks.length > 0 && yesterdaysTasks.every(task => task.completed)) {
-          return { ...achievement, unlocked: true, unlockedAt: getCurrentDate() };
+          return { ...achievement, unlocked: true, unlockedAt: currentDate };
         }
         break;
 
       case 'complete-all-rituals':
         // Check if all rituals were completed yesterday
-        const yesterdayDate = new Date();
-        yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-        const yesterdayDayOfWeek = yesterdayDate.getDay();
-        const yesterdayStr = getYesterdayDate();
+        const yesterdayDate2 = new Date();
+        yesterdayDate2.setDate(yesterdayDate2.getDate() - 1);
+        const yesterdayDayOfWeek = yesterdayDate2.getDay();
         
         const yesterdaysRituals = data.rituals.filter(ritual => 
           ritual.frequency.includes(yesterdayDayOfWeek)
         );
         if (yesterdaysRituals.length > 0 && 
-            yesterdaysRituals.every(ritual => ritual.completedDates?.includes(yesterdayStr))) {
-          return { ...achievement, unlocked: true, unlockedAt: getCurrentDate() };
+            yesterdaysRituals.every(ritual => ritual.completedDates?.includes(yesterdayDate))) {
+          return { ...achievement, unlocked: true, unlockedAt: currentDate };
         }
         break;
 
@@ -73,7 +75,7 @@ export const checkAchievements = (data: AppData): Achievement[] => {
         const updated = { ...achievement, progress };
         if (progress >= 15) {
           updated.unlocked = true;
-          updated.unlockedAt = getCurrentDate();
+          updated.unlockedAt = currentDate;
         }
         return updated;
     }

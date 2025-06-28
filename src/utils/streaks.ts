@@ -1,13 +1,16 @@
 import { HabitItem, Ritual, Habit } from '../types';
-import { getCurrentDate } from './storage';
+import { DateManager } from './dateUtils';
 
 export const calculateStreak = (item: HabitItem): number => {
   if (!item.completedDates || item.completedDates.length === 0) {
     return 0;
   }
 
+  const dateManager = DateManager.getInstance();
   const sortedDates = item.completedDates.slice().sort();
-  const today = new Date();
+  const today = dateManager.isDevMode() 
+    ? new Date(dateManager.getCurrentDate()) 
+    : new Date();
   let streak = 0;
   let currentDate = new Date(today);
 
@@ -62,6 +65,7 @@ export const canUseSkip = (item: HabitItem): boolean => {
 };
 
 export const getTodaysScheduledItems = (items: HabitItem[]): HabitItem[] => {
-  const today = new Date().getDay();
+  const dateManager = DateManager.getInstance();
+  const today = dateManager.getCurrentDayOfWeek();
   return items.filter(item => item.frequency.includes(today));
 };

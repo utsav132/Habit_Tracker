@@ -64,21 +64,6 @@ const EditRitual: React.FC<EditRitualProps> = ({
     }
   }, [ritual, existingHabits]);
 
-  useEffect(() => {
-    if (name.trim() && name !== originalName && checkForDuplicateName(name, allExistingItems)) {
-      const suggested = generateUniqueName(name, allExistingItems);
-      setSuggestedName(suggested);
-      setShowDuplicateWarning(true);
-    } else {
-      setShowDuplicateWarning(false);
-      setSuggestedName('');
-    }
-  }, [name, originalName, allExistingItems]);
-
-  const handleNameChange = (value: string) => {
-    setName(value);
-  };
-
   const acceptSuggestedName = () => {
     setName(suggestedName);
     setShowDuplicateWarning(false);
@@ -88,7 +73,7 @@ const EditRitual: React.FC<EditRitualProps> = ({
   const handleSave = () => {
     if (!name.trim() || !ritual) return;
 
-    // Final check for duplicates (excluding current ritual)
+    // Check for duplicates on save (excluding current ritual)
     if (name !== originalName && checkForDuplicateName(name, allExistingItems)) {
       const suggested = generateUniqueName(name, allExistingItems);
       setSuggestedName(suggested);
@@ -153,9 +138,10 @@ const EditRitual: React.FC<EditRitualProps> = ({
             <input
               type="text"
               value={name}
-              onChange={(e) => handleNameChange(e.target.value)}
+              onChange={(e) => setName(e.target.value)}
               placeholder="e.g., Morning meditation"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              autoFocus
             />
             
             {/* Duplicate Name Warning */}
@@ -279,7 +265,7 @@ const EditRitual: React.FC<EditRitualProps> = ({
           </button>
           <button
             onClick={handleSave}
-            disabled={!name.trim() || (triggerType === 'habit' && !selectedHabit) || showDuplicateWarning}
+            disabled={!name.trim() || (triggerType === 'habit' && !selectedHabit)}
             className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             Save Changes

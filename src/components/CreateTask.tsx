@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { X, Calendar, AlertCircle } from 'lucide-react';
 import { Task } from '../types';
 import { getCurrentDate, getTomorrowDate, formatDate } from '../utils/storage';
@@ -13,32 +13,12 @@ interface CreateTaskProps {
 
 const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onClose, onSave, existingTasks }) => {
   const [name, setName] = useState('');
-  const [originalName, setOriginalName] = useState('');
   const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
   const [suggestedName, setSuggestedName] = useState('');
   const [date, setDate] = useState(getCurrentDate());
 
-  useEffect(() => {
-    if (name.trim() && checkForDuplicateName(name, existingTasks)) {
-      const suggested = generateUniqueName(name, existingTasks);
-      setSuggestedName(suggested);
-      setShowDuplicateWarning(true);
-    } else {
-      setShowDuplicateWarning(false);
-      setSuggestedName('');
-    }
-  }, [name, existingTasks]);
-
-  const handleNameChange = (value: string) => {
-    setName(value);
-    if (!originalName) {
-      setOriginalName(value);
-    }
-  };
-
   const acceptSuggestedName = () => {
     setName(suggestedName);
-    setOriginalName(suggestedName);
     setShowDuplicateWarning(false);
     setSuggestedName('');
   };
@@ -46,7 +26,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onClose, onSave, existi
   const handleSave = () => {
     if (!name.trim()) return;
     
-    // Final check for duplicates
+    // Check for duplicates on save
     if (checkForDuplicateName(name, existingTasks)) {
       const suggested = generateUniqueName(name, existingTasks);
       setSuggestedName(suggested);
@@ -67,7 +47,6 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onClose, onSave, existi
 
   const resetForm = () => {
     setName('');
-    setOriginalName('');
     setShowDuplicateWarning(false);
     setSuggestedName('');
     setDate(getCurrentDate());
@@ -99,7 +78,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onClose, onSave, existi
             <input
               type="text"
               value={name}
-              onChange={(e) => handleNameChange(e.target.value)}
+              onChange={(e) => setName(e.target.value)}
               placeholder="e.g., Buy groceries"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               autoFocus
@@ -185,7 +164,7 @@ const CreateTask: React.FC<CreateTaskProps> = ({ isOpen, onClose, onSave, existi
           </button>
           <button
             onClick={handleSave}
-            disabled={!name.trim() || showDuplicateWarning}
+            disabled={!name.trim()}
             className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             Create Task

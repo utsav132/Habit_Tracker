@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Zap, Crown, Trophy } from 'lucide-react';
+import { Calendar, Zap, Crown, Trophy, Settings, ChevronRight, ChevronLeft } from 'lucide-react';
 import { AppData, Ritual, Habit, Task, HabitItem } from './types';
-import { getStoredData, saveData, getCurrentDate } from './utils/storage';
+import { getStoredData, saveData } from './utils/storage';
+import { DateManager } from './utils/dateUtils';
 import { calculateStreak, shouldPromoteToHabit, shouldDemoteToRitual } from './utils/streaks';
 import { checkAchievements } from './utils/achievements';
 import { NotificationManager } from './utils/notifications';
@@ -28,8 +29,16 @@ function App() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
   const [rewardMessage, setRewardMessage] = useState<string>('');
+  const [devMode, setDevMode] = useState(false);
+  const [currentDate, setCurrentDate] = useState('');
 
   const notificationManager = NotificationManager.getInstance();
+  const dateManager = DateManager.getInstance();
+
+  // Update current date when dev mode changes
+  useEffect(() => {
+    setCurrentDate(dateManager.getFormattedCurrentDate());
+  }, [devMode]);
 
   // Initialize notifications on app load
   useEffect(() => {
@@ -71,11 +80,32 @@ function App() {
 
   const generateId = () => Math.random().toString(36).substr(2, 9);
 
+  const toggleDevMode = () => {
+    const newDevMode = !devMode;
+    setDevMode(newDevMode);
+    dateManager.setDevMode(newDevMode);
+    setCurrentDate(dateManager.getFormattedCurrentDate());
+  };
+
+  const goToNextDay = () => {
+    if (devMode) {
+      dateManager.goToNextDay();
+      setCurrentDate(dateManager.getFormattedCurrentDate());
+    }
+  };
+
+  const goToPreviousDay = () => {
+    if (devMode) {
+      dateManager.goToPreviousDay();
+      setCurrentDate(dateManager.getFormattedCurrentDate());
+    }
+  };
+
   const handleCreateRitual = (ritualData: Omit<Ritual, 'id' | 'createdAt'>) => {
     const newRitual: Ritual = {
       ...ritualData,
       id: generateId(),
-      createdAt: getCurrentDate(),
+      createdAt: dateManager.getCurrentDate(),
     };
 
     setData(prev => ({
@@ -91,7 +121,7 @@ function App() {
     const newTask: Task = {
       ...taskData,
       id: generateId(),
-      createdAt: getCurrentDate(),
+      createdAt: dateManager.getCurrentDate(),
     };
 
     setData(prev => ({
@@ -148,7 +178,7 @@ function App() {
       const ritual = prev.rituals.find(r => r.id === ritualId);
       if (!ritual) return prev;
 
-      const today = getCurrentDate();
+      const today = dateManager.getCurrentDate();
       const updatedCompletedDates = [...(ritual.completedDates || []), today];
       const newStreak = calculateStreak({
         ...ritual,
@@ -215,7 +245,7 @@ function App() {
       const habit = prev.habits.find(h => h.id === habitId);
       if (!habit) return prev;
 
-      const today = getCurrentDate();
+      const today = dateManager.getCurrentDate();
       const updatedCompletedDates = [...(habit.completedDates || []), today];
       const newStreak = calculateStreak({
         ...habit,
@@ -318,40 +348,78 @@ function App() {
         {/* Header */}
         <header className="bg-white shadow-sm border-b">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <h1 className="text-2xl font-bold text-gray-900">Habit Tracker</h1>
+            <div className="flex items-center justify-between">
+              <h1 className="text-2xl font-bold text-gray-900">Habit Tracker</h1>
+              
+              {/* Dev Mode Date Controls */}
+              {devMode && (
+                <div className="flex items-center space-x-2 bg-orange-100 px-3 py-2 rounded-lg">
+                  <button
+                    onClick={goToPreviousDay}
+                    className="p-1 hover:bg-orange-200 rounded transition-colors"
+                  >
+                    <ChevronLeft className="w-4 h-4 text-orange-700" />
+                  </button>
+                  <span className="text-sm font-medium text-orange-800 min-w-[100px] text-center">
+                    {currentDate}
+                  </span>
+                  <button
+                    onClick={goToNextDay}
+                    className="p-1 hover:bg-orange-200 rounded transition-colors"
+                  >
+                    <ChevronRight className="w-4 h-4 text-orange-700" />
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 
         {/* Tab Navigation */}
         <nav className="bg-white border-b">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex space-x-1 overflow-x-auto">
-              {tabs.map((tab) => {
-                const Icon = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center space-x-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                      activeTab === tab.id
-                        ? 'border-purple-500 text-purple-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    <span>{tab.name}</span>
-                    {tab.count > 0 && (
-                      <span className={`px-2 py-0.5 text-xs rounded-full ${
+            <div className="flex justify-between items-center">
+              <div className="flex space-x-1 overflow-x-auto">
+                {tabs.map((tab) => {
+                  const Icon = tab.icon;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`flex items-center space-x-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                         activeTab === tab.id
-                          ? 'bg-purple-100 text-purple-700'
-                          : 'bg-gray-100 text-gray-600'
-                      }`}>
-                        {tab.count}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+                          ? 'border-purple-500 text-purple-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      <span>{tab.name}</span>
+                      {tab.count > 0 && (
+                        <span className={`px-2 py-0.5 text-xs rounded-full ${
+                          activeTab === tab.id
+                            ? 'bg-purple-100 text-purple-700'
+                            : 'bg-gray-100 text-gray-600'
+                        }`}>
+                          {tab.count}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              
+              {/* Dev Mode Toggle */}
+              <button
+                onClick={toggleDevMode}
+                className={`flex items-center space-x-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                  devMode
+                    ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                <Settings className="w-4 h-4" />
+                <span className="hidden sm:inline">Dev Mode</span>
+              </button>
             </div>
           </div>
         </nav>
