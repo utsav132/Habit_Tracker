@@ -225,14 +225,14 @@ function App() {
 
       const today = dateManager.getCurrentDate();
       const updatedCompletedDates = [...(ritual.completedDates || []), today];
-      const newStreak = calculateStreak({
+      
+      // Calculate new streak and frozen streaks
+      const tempRitual = {
         ...ritual,
         completedDates: updatedCompletedDates,
-      });
-      const newFrozenStreaks = calculateFrozenStreaks({
-        ...ritual,
-        completedDates: updatedCompletedDates,
-      });
+      };
+      const newStreak = calculateStreak(tempRitual);
+      const newFrozenStreaks = calculateFrozenStreaks(tempRitual);
 
       const updatedRitual: Ritual = {
         ...ritual,
@@ -297,14 +297,14 @@ function App() {
 
       const today = dateManager.getCurrentDate();
       const updatedCompletedDates = [...(habit.completedDates || []), today];
-      const newStreak = calculateStreak({
+      
+      // Calculate new streak and frozen streaks
+      const tempHabit = {
         ...habit,
         completedDates: updatedCompletedDates,
-      });
-      const newFrozenStreaks = calculateFrozenStreaks({
-        ...habit,
-        completedDates: updatedCompletedDates,
-      });
+      };
+      const newStreak = calculateStreak(tempHabit);
+      const newFrozenStreaks = calculateFrozenStreaks(tempHabit);
 
       const updatedHabit: Habit = {
         ...habit,

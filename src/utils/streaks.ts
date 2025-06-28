@@ -59,8 +59,9 @@ export const calculateFrozenStreaks = (item: HabitItem): number => {
   let consecutiveDays = 0;
   let frozenStreaksEarned = 0;
   let checkDate = new Date(currentDate);
+  let missedDays = 0;
 
-  // Count consecutive 10-day periods without missing
+  // Count consecutive completed days and calculate frozen streaks
   while (checkDate >= new Date(sortedDates[0])) {
     const dateStr = checkDate.toISOString().split('T')[0];
     const dayOfWeek = checkDate.getDay();
@@ -70,14 +71,16 @@ export const calculateFrozenStreaks = (item: HabitItem): number => {
         consecutiveDays++;
         
         // Every 10 consecutive days earns a frozen streak (max 2)
-        if (consecutiveDays % 10 === 0 && frozenStreaksEarned < 2) {
+        if (consecutiveDays > 0 && consecutiveDays % 10 === 0 && frozenStreaksEarned < 2) {
           frozenStreaksEarned++;
         }
       } else {
-        // Only reset if this is a past day (not today)
+        // Only count as missed if this is a past day (not today)
         if (dateStr < currentDate) {
+          missedDays++;
+          // Reset consecutive count on missed day
           consecutiveDays = 0;
-          frozenStreaksEarned = 0; // Reset frozen streaks when streak breaks
+          // Don't reset frozen streaks immediately - they can be used to cover missed days
         }
       }
     }
@@ -85,7 +88,9 @@ export const calculateFrozenStreaks = (item: HabitItem): number => {
     checkDate.setDate(checkDate.getDate() - 1);
   }
 
-  return Math.min(frozenStreaksEarned, 2);
+  // Subtract frozen streaks that would be used to cover missed days
+  const frozenStreaksUsed = Math.min(missedDays, frozenStreaksEarned);
+  return Math.max(0, frozenStreaksEarned - frozenStreaksUsed);
 };
 
 // Calculate streak with frozen streak usage for display purposes
