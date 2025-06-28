@@ -90,35 +90,44 @@ export const calculateCurrentStreakAndFrozenUsage = (item: HabitItem): { streak:
 
   const dateManager = DateManager.getInstance();
   const sortedDates = item.completedDates.slice().sort();
-  const today = dateManager.isDevMode() 
-    ? new Date(dateManager.getCurrentDate()) 
-    : new Date();
+  const currentDate = dateManager.getCurrentDate();
+  const today = new Date(currentDate);
+  
   let streak = 0;
-  let currentDate = new Date(today);
+  let checkDate = new Date(today);
   let frozenStreaksUsed = 0;
   const maxFrozenStreaks = item.frozenStreaks || 0;
+  let foundMissedDay = false;
 
   // Start from today and work backwards
-  while (currentDate >= new Date(sortedDates[0])) {
-    const dateStr = currentDate.toISOString().split('T')[0];
-    const dayOfWeek = currentDate.getDay();
+  while (checkDate >= new Date(sortedDates[0])) {
+    const dateStr = checkDate.toISOString().split('T')[0];
+    const dayOfWeek = checkDate.getDay();
     
     // Check if this day is in the frequency
     if (item.frequency.includes(dayOfWeek)) {
       if (sortedDates.includes(dateStr)) {
         streak++;
       } else {
-        // Check if they can use a frozen streak
-        if (frozenStreaksUsed < maxFrozenStreaks) {
-          frozenStreaksUsed++;
-          streak++; // Maintain streak using frozen streak
-        } else {
-          break; // Streak is broken
+        // This is a missed day
+        foundMissedDay = true;
+        
+        // Only break streak if we've passed the current day
+        // (i.e., we're looking at yesterday or earlier)
+        if (dateStr < currentDate) {
+          // Check if they can use a frozen streak
+          if (frozenStreaksUsed < maxFrozenStreaks) {
+            frozenStreaksUsed++;
+            streak++; // Maintain streak using frozen streak
+          } else {
+            break; // Streak is broken
+          }
         }
+        // If it's today and not completed yet, don't break the streak
       }
     }
     
-    currentDate.setDate(currentDate.getDate() - 1);
+    checkDate.setDate(checkDate.getDate() - 1);
   }
 
   return { 

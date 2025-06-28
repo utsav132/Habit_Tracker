@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Plus, Clock, Zap, Flame, Gift, Calendar, Edit, Trash2, MoreVertical, Shield, ChevronDown, ChevronUp } from 'lucide-react';
 import { Ritual, HabitItem } from '../types';
-import { getTodaysScheduledItems, getOtherItems, calculateCurrentStreakAndFrozenUsage } from '../utils/streaks';
+import { getTodaysScheduledItems, getOtherItems } from '../utils/streaks';
 import { getCurrentDate } from '../utils/storage';
 
 interface RitualsProps {
@@ -21,26 +21,12 @@ const Rituals: React.FC<RitualsProps> = ({
 }) => {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [showOtherRituals, setShowOtherRituals] = useState(false);
-  const [ritualsWithCurrentStats, setRitualsWithCurrentStats] = useState<(Ritual & { currentStreak: number; currentFrozenStreaks: number })[]>([]);
   
   const todaysRituals = getTodaysScheduledItems(rituals);
   const otherRituals = getOtherItems(rituals);
   const completedToday = todaysRituals.filter(ritual => 
     ritual.lastCompleted === getCurrentDate()
   ).length;
-
-  // Update rituals with current streak and frozen streak stats
-  useEffect(() => {
-    const updatedRituals = rituals.map(ritual => {
-      const { streak, frozenStreaksRemaining } = calculateCurrentStreakAndFrozenUsage(ritual);
-      return {
-        ...ritual,
-        currentStreak: streak,
-        currentFrozenStreaks: frozenStreaksRemaining
-      };
-    });
-    setRitualsWithCurrentStats(updatedRituals);
-  }, [rituals]);
 
   const formatTrigger = (trigger: Ritual['trigger']) => {
     if (trigger.type === 'time') {
@@ -82,7 +68,7 @@ const Rituals: React.FC<RitualsProps> = ({
     setOpenMenuId(null);
   };
 
-  const RitualCard: React.FC<{ ritual: Ritual & { currentStreak: number; currentFrozenStreaks: number }; isScheduledToday: boolean }> = ({ ritual, isScheduledToday }) => {
+  const RitualCard: React.FC<{ ritual: Ritual; isScheduledToday: boolean }> = ({ ritual, isScheduledToday }) => {
     const isCompletedToday = ritual.lastCompleted === getCurrentDate();
     const canComplete = !isCompletedToday; // Allow completion even if not scheduled today
 
@@ -100,16 +86,16 @@ const Rituals: React.FC<RitualsProps> = ({
           <div className="flex-1">
             <div className="flex items-center space-x-2 mb-2">
               <h3 className="text-lg font-semibold text-gray-900">{ritual.name}</h3>
-              {ritual.currentStreak > 0 && (
+              {ritual.streak > 0 && (
                 <div className="flex items-center space-x-1 bg-orange-100 text-orange-700 px-2 py-1 rounded-full text-xs">
                   <Flame className="w-3 h-3" />
-                  <span>{ritual.currentStreak}</span>
+                  <span>{ritual.streak}</span>
                 </div>
               )}
-              {ritual.currentFrozenStreaks > 0 && (
+              {ritual.frozenStreaks > 0 && (
                 <div className="flex items-center space-x-1 bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs">
                   <Shield className="w-3 h-3" />
-                  <span>{ritual.currentFrozenStreaks}</span>
+                  <span>{ritual.frozenStreaks}</span>
                 </div>
               )}
             </div>
@@ -131,9 +117,9 @@ const Rituals: React.FC<RitualsProps> = ({
               )}
             </div>
 
-            {ritual.currentStreak >= 50 && ritual.currentStreak < 60 && (
+            {ritual.streak >= 50 && ritual.streak < 60 && (
               <div className="mt-2 text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded">
-                {60 - ritual.currentStreak} more days to become a habit!
+                {60 - ritual.streak} more days to become a habit!
               </div>
             )}
           </div>
@@ -258,17 +244,13 @@ const Rituals: React.FC<RitualsProps> = ({
               <div>
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Today's Rituals</h2>
                 <div className="space-y-4">
-                  {todaysRituals.map((ritual) => {
-                    const ritualWithStats = ritualsWithCurrentStats.find(r => r.id === ritual.id);
-                    if (!ritualWithStats) return null;
-                    return (
-                      <RitualCard
-                        key={ritual.id}
-                        ritual={ritualWithStats}
-                        isScheduledToday={true}
-                      />
-                    );
-                  })}
+                  {todaysRituals.map((ritual) => (
+                    <RitualCard
+                      key={ritual.id}
+                      ritual={ritual}
+                      isScheduledToday={true}
+                    />
+                  ))}
                 </div>
               </div>
             )}
@@ -290,17 +272,13 @@ const Rituals: React.FC<RitualsProps> = ({
                 
                 {showOtherRituals && (
                   <div className="space-y-4">
-                    {otherRituals.map((ritual) => {
-                      const ritualWithStats = ritualsWithCurrentStats.find(r => r.id === ritual.id);
-                      if (!ritualWithStats) return null;
-                      return (
-                        <RitualCard
-                          key={ritual.id}
-                          ritual={ritualWithStats}
-                          isScheduledToday={false}
-                        />
-                      );
-                    })}
+                    {otherRituals.map((ritual) => (
+                      <RitualCard
+                        key={ritual.id}
+                        ritual={ritual}
+                        isScheduledToday={false}
+                      />
+                    ))}
                   </div>
                 )}
               </div>

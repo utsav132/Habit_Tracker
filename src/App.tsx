@@ -3,7 +3,7 @@ import { Calendar, Zap, Crown, Trophy, Settings, ChevronRight, ChevronLeft } fro
 import { AppData, Ritual, Habit, Task, HabitItem } from './types';
 import { getStoredData, saveData } from './utils/storage';
 import { DateManager } from './utils/dateUtils';
-import { calculateStreak, calculateFrozenStreaks, shouldPromoteToHabit, shouldDemoteToRitual, calculateCurrentStreakAndFrozenUsage } from './utils/streaks';
+import { calculateStreak, calculateFrozenStreaks, shouldPromoteToHabit, shouldDemoteToRitual } from './utils/streaks';
 import { checkAchievements } from './utils/achievements';
 import { NotificationManager } from './utils/notifications';
 import Rituals from './components/Rituals';
@@ -60,44 +60,6 @@ function App() {
     // Reschedule notifications when rituals change
     notificationManager.rescheduleAllRituals(data.rituals);
   }, [data]);
-
-  // Update all items with current streak calculations on data change
-  useEffect(() => {
-    setData(prev => {
-      const updatedRituals = prev.rituals.map(ritual => {
-        const { streak, frozenStreaksRemaining } = calculateCurrentStreakAndFrozenUsage(ritual);
-        return {
-          ...ritual,
-          streak,
-          frozenStreaks: frozenStreaksRemaining
-        };
-      });
-
-      const updatedHabits = prev.habits.map(habit => {
-        const { streak, frozenStreaksRemaining } = calculateCurrentStreakAndFrozenUsage(habit);
-        return {
-          ...habit,
-          streak,
-          frozenStreaks: frozenStreaksRemaining
-        };
-      });
-
-      // Only update if there are actual changes
-      const hasChanges = 
-        JSON.stringify(updatedRituals) !== JSON.stringify(prev.rituals) ||
-        JSON.stringify(updatedHabits) !== JSON.stringify(prev.habits);
-
-      if (hasChanges) {
-        return {
-          ...prev,
-          rituals: updatedRituals,
-          habits: updatedHabits
-        };
-      }
-
-      return prev;
-    });
-  }, [dateManager.getCurrentDate()]);
 
   // Check and update achievements
   useEffect(() => {
