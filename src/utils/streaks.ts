@@ -138,12 +138,12 @@ export const calculateStreakWithFrozenUsage = (item: HabitItem): { streak: numbe
 
   return { 
     streak, 
-    frozenStreaksRemaining: Math.max(0, maxFrozenStreaks - frozenStreaksUsed) 
+    frozenStreaksRemaining: 0 
   };
 };
 
 export const shouldPromoteToHabit = (ritual: Ritual): boolean => {
-  return ritual.streak >= 60;
+  return ritual.streak >= 20;
 };
 
 export const shouldDemoteToRitual = (habit: Habit): boolean => {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Crown, Flame, Gift, Calendar, Clock, Zap, Edit, Trash2, MoreVertical, Shield } from 'lucide-react';
+import { Crown, Flame, Gift, Calendar, Clock, Edit, Trash2, MoreVertical, Shield } from 'lucide-react';
 import { Habit } from '../types';
 import { getTodaysScheduledItems } from '../utils/streaks';
 import { getCurrentDate } from '../utils/storage';
@@ -41,6 +41,7 @@ const Habits: React.FC<HabitsProps> = ({ habits, onCompleteHabit, onEditHabit, o
   };
 
   const getDaysSinceHabit = (becameHabitAt: string) => {
+    console.log(becameHabitAt)
     return Math.floor(
       (new Date().getTime() - new Date(becameHabitAt).getTime()) / 
       (1000 * 60 * 60 * 24)
@@ -123,6 +124,7 @@ const Habits: React.FC<HabitsProps> = ({ habits, onCompleteHabit, onEditHabit, o
               const isCompletedToday = habit.lastCompleted === getCurrentDate();
               const canComplete = isScheduledToday && !isCompletedToday;
               const daysSinceHabit = getDaysSinceHabit(habit.becameHabitAt);
+              console.log(daysSinceHabit)
 
               return (
                 <div
@@ -167,10 +169,6 @@ const Habits: React.FC<HabitsProps> = ({ habits, onCompleteHabit, onEditHabit, o
                             <span>{habit.reward}</span>
                           </div>
                         )}
-                      </div>
-
-                      <div className="text-xs text-yellow-600 bg-yellow-100 px-2 py-1 rounded inline-block">
-                        Habit for {daysSinceHabit} days
                       </div>
 
                       {daysSinceHabit >= 90 && (

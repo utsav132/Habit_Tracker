@@ -117,9 +117,9 @@ const Rituals: React.FC<RitualsProps> = ({
               )}
             </div>
 
-            {ritual.streak >= 50 && ritual.streak < 60 && (
+            {ritual.streak >= 10 && ritual.streak < 20 && (
               <div className="mt-2 text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded">
-                {60 - ritual.streak} more days to become a habit!
+                {20 - ritual.streak} more days to become a habit!
               </div>
             )}
           </div>
