@@ -51,19 +51,24 @@ const EditHabit: React.FC<EditHabitProps> = ({
   // Get habit IDs that are already used as triggers (excluding current habit)
   const usedTriggerHabitIds = [
     ...existingRituals.filter(r => r.trigger.type === 'habit').map(r => r.trigger.habitId),
-    ...existingHabits.filter(h => h.id !== habit?.id && h.trigger.type === 'habit').map(h => (h.trigger as HabitTrigger).habitId)
+    ...existingHabits.filter(h => h.id !== habit?.id && h.trigger?.type === 'habit').map(h => (h.trigger as HabitTrigger).habitId)
   ];
 
   useEffect(() => {
     if (habit) {
       setName(habit.name);
       setOriginalName(habit.name);
-      setTriggerType(habit.trigger.type);
-      if (habit.trigger.type === 'time') {
-        setTime(habit.trigger.time);
+      if (habit.trigger) {
+        setTriggerType(habit.trigger.type);
+        if (habit.trigger.type === 'time') {
+          setTime(habit.trigger.time);
+        } else {
+          const triggerHabit = existingHabits.find(h => h.id === habit.trigger?.habitId);
+          setSelectedHabit(triggerHabit || null);
+        }
       } else {
-        const triggerHabit = existingHabits.find(h => h.id === habit.trigger.habitId);
-        setSelectedHabit(triggerHabit || null);
+        setTriggerType('time');
+        setSelectedHabit(null);
       }
       setFrequency(habit.frequency);
       setReward(habit.reward || '');
@@ -87,17 +92,20 @@ const EditHabit: React.FC<EditHabitProps> = ({
       return;
     }
 
-    let trigger: TimeTrigger | HabitTrigger;
+    let trigger: TimeTrigger | HabitTrigger | undefined;
     
     if (triggerType === 'time') {
       trigger = { type: 'time', time };
     } else {
-      if (!selectedHabit) return;
-      trigger = { 
-        type: 'habit', 
-        habitId: selectedHabit.id, 
-        habitName: selectedHabit.name 
-      };
+      if (!selectedHabit) {
+        trigger = undefined; // No trigger set
+      } else {
+        trigger = { 
+          type: 'habit', 
+          habitId: selectedHabit.id, 
+          habitName: selectedHabit.name 
+        };
+      }
     }
 
     const updatedHabit: Habit = {
@@ -124,7 +132,7 @@ const EditHabit: React.FC<EditHabitProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto modal-scroll">
         <div className="flex items-center justify-between p-6 border-b">
           <h2 className="text-xl font-bold text-gray-900">Edit Habit</h2>
           <button
@@ -185,7 +193,7 @@ const EditHabit: React.FC<EditHabitProps> = ({
           {/* Trigger */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Trigger *
+              Trigger
             </label>
             <div className="flex space-x-2 mb-4">
               <button
@@ -272,7 +280,7 @@ const EditHabit: React.FC<EditHabitProps> = ({
           </button>
           <button
             onClick={handleSave}
-            disabled={!name.trim() || (triggerType === 'habit' && !selectedHabit)}
+            disabled={!name.trim()}
             className="flex-1 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             Save Changes
