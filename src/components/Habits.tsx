@@ -43,7 +43,6 @@ const Habits: React.FC<HabitsProps> = ({ habits, onCompleteHabit, onEditHabit, o
   };
 
   const getDaysSinceHabit = (becameHabitAt: string) => {
-    console.log(becameHabitAt)
     return Math.floor(
       (new Date().getTime() - new Date(becameHabitAt).getTime()) / 
       (1000 * 60 * 60 * 24)
@@ -164,7 +163,7 @@ const Habits: React.FC<HabitsProps> = ({ habits, onCompleteHabit, onEditHabit, o
               const isCompletedToday = habit.lastCompleted === getCurrentDate();
               const canComplete = isScheduledToday && !isCompletedToday;
               const daysSinceHabit = getDaysSinceHabit(habit.becameHabitAt);
-              console.log(daysSinceHabit)
+              //console.log(daysSinceHabit)
 
               return (
                 <div

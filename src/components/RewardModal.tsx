@@ -109,7 +109,7 @@ const RewardModal: React.FC<RewardModalProps> = ({
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         @keyframes modalSlideIn {
           0% {
             opacity: 0;
