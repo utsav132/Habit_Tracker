@@ -453,17 +453,6 @@ function App() {
 
   const allHabits: HabitItem[] = [...data.rituals, ...data.habits];
 
-  // Get section-specific CSS class for scrollbar styling
-  const getSectionClass = (tab: TabType) => {
-    switch (tab) {
-      case 'rituals': return 'rituals-section';
-      case 'tasks': return 'tasks-section';
-      case 'habits': return 'habits-section';
-      case 'achievements': return 'achievements-section';
-      default: return '';
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100">
       {/* Confetti Animation */}
@@ -484,8 +473,7 @@ function App() {
         href="https://bolt.new"
         target="_blank"
         rel="noopener noreferrer"
-        className="fixed bottom-4 right-4 z-40 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-full px-3 py-2 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 group mr-2"
-        style={{ marginRight: '16px' }} // Extra margin to avoid scrollbar overlap
+        className="fixed bottom-4 right-4 z-40 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-full px-3 py-2 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 group"
       >
         <div className="flex items-center space-x-2 text-sm">
           <div className="w-2 h-2 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full animate-pulse"></div>
@@ -577,7 +565,7 @@ function App() {
 
         {/* Main Content */}
         <main className="flex-1 overflow-hidden">
-          <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 h-full ${getSectionClass(activeTab)}`}>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 h-full">
             {activeTab === 'rituals' && (
               <Rituals
                 rituals={data.rituals}
