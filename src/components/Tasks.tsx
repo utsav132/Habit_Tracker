@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Plus, CheckCircle, Circle, Calendar, Edit, Trash2, MoreVertical } from 'lucide-react';
 import { Task } from '../types';
 import { getCurrentDate, formatDate } from '../utils/storage';
@@ -19,6 +19,8 @@ const Tasks: React.FC<TasksProps> = ({
   onDeleteTask
 }) => {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [menuPosition, setMenuPosition] = useState<'bottom' | 'top'>('bottom');
+  const menuRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   
   const todaysTasks = tasks.filter(task => task.date === getCurrentDate());
   const tomorrowsTasks = tasks.filter(task => {
@@ -31,7 +33,27 @@ const Tasks: React.FC<TasksProps> = ({
 
   const handleMenuClick = (taskId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setOpenMenuId(openMenuId === taskId ? null : taskId);
+    
+    if (openMenuId === taskId) {
+      setOpenMenuId(null);
+      return;
+    }
+
+    // Calculate position
+    const button = e.currentTarget as HTMLElement;
+    const rect = button.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const spaceBelow = viewportHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    
+    // If there's not enough space below (need ~80px for menu) but enough above
+    if (spaceBelow < 80 && spaceAbove > 80) {
+      setMenuPosition('top');
+    } else {
+      setMenuPosition('bottom');
+    }
+    
+    setOpenMenuId(taskId);
   };
 
   const handleEdit = (task: Task, e: React.MouseEvent) => {
@@ -47,6 +69,24 @@ const Tasks: React.FC<TasksProps> = ({
     }
     setOpenMenuId(null);
   };
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (openMenuId && menuRefs.current[openMenuId]) {
+        const menuElement = menuRefs.current[openMenuId];
+        const target = event.target as Node;
+        if (menuElement && !menuElement.contains(target)) {
+          setOpenMenuId(null);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [openMenuId]);
 
   const TaskItem: React.FC<{ task: Task }> = ({ task }) => (
     <div
@@ -76,7 +116,7 @@ const Tasks: React.FC<TasksProps> = ({
         </div>
         
         {/* Menu Button */}
-        <div className="relative">
+        <div className="relative" ref={el => menuRefs.current[task.id] = el}>
           <button
             onClick={(e) => handleMenuClick(task.id, e)}
             className="p-1 hover:bg-gray-100 rounded transition-colors"
@@ -86,17 +126,19 @@ const Tasks: React.FC<TasksProps> = ({
 
           {/* Dropdown Menu */}
           {openMenuId === task.id && (
-            <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border py-1 z-10 min-w-[120px]">
+            <div className={`absolute right-0 ${
+              menuPosition === 'top' ? 'bottom-full mb-1' : 'top-full mt-1'
+            } bg-white rounded-lg shadow-xl border py-1 z-20 min-w-[120px]`}>
               <button
                 onClick={(e) => handleEdit(task, e)}
-                className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2"
+                className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2 transition-colors"
               >
                 <Edit className="w-4 h-4" />
                 <span>Edit</span>
               </button>
               <button
                 onClick={(e) => handleDelete(task.id, e)}
-                className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2 text-red-600"
+                className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2 text-red-600 transition-colors"
               >
                 <Trash2 className="w-4 h-4" />
                 <span>Delete</span>
@@ -214,14 +256,6 @@ const Tasks: React.FC<TasksProps> = ({
           </div>
         )}
       </div>
-
-      {/* Click outside to close menu */}
-      {openMenuId && (
-        <div
-          className="fixed inset-0 z-5"
-          onClick={() => setOpenMenuId(null)}
-        />
-      )}
     </div>
   );
 };

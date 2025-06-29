@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Crown, Flame, Gift, Calendar, Clock, Edit, Trash2, MoreVertical, Shield } from 'lucide-react';
 import { Habit } from '../types';
 import { getTodaysScheduledItems } from '../utils/streaks';
@@ -13,6 +13,8 @@ interface HabitsProps {
 
 const Habits: React.FC<HabitsProps> = ({ habits, onCompleteHabit, onEditHabit, onDeleteHabit }) => {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [menuPosition, setMenuPosition] = useState<'bottom' | 'top'>('bottom');
+  const menuRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   
   const todaysHabits = getTodaysScheduledItems(habits);
   const completedToday = todaysHabits.filter(habit => 
@@ -50,7 +52,27 @@ const Habits: React.FC<HabitsProps> = ({ habits, onCompleteHabit, onEditHabit, o
 
   const handleMenuClick = (habitId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setOpenMenuId(openMenuId === habitId ? null : habitId);
+    
+    if (openMenuId === habitId) {
+      setOpenMenuId(null);
+      return;
+    }
+
+    // Calculate position
+    const button = e.currentTarget as HTMLElement;
+    const rect = button.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const spaceBelow = viewportHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    
+    // If there's not enough space below (need ~80px for menu) but enough above
+    if (spaceBelow < 80 && spaceAbove > 80) {
+      setMenuPosition('top');
+    } else {
+      setMenuPosition('bottom');
+    }
+    
+    setOpenMenuId(habitId);
   };
 
   const handleEdit = (habit: Habit, e: React.MouseEvent) => {
@@ -66,6 +88,24 @@ const Habits: React.FC<HabitsProps> = ({ habits, onCompleteHabit, onEditHabit, o
     }
     setOpenMenuId(null);
   };
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (openMenuId && menuRefs.current[openMenuId]) {
+        const menuElement = menuRefs.current[openMenuId];
+        const target = event.target as Node;
+        if (menuElement && !menuElement.contains(target)) {
+          setOpenMenuId(null);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [openMenuId]);
 
   return (
     <div className="h-full flex flex-col">
@@ -201,7 +241,7 @@ const Habits: React.FC<HabitsProps> = ({ habits, onCompleteHabit, onEditHabit, o
                       )}
 
                       {/* Menu Button */}
-                      <div className="relative">
+                      <div className="relative" ref={el => menuRefs.current[habit.id] = el}>
                         <button
                           onClick={(e) => handleMenuClick(habit.id, e)}
                           className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -211,17 +251,19 @@ const Habits: React.FC<HabitsProps> = ({ habits, onCompleteHabit, onEditHabit, o
 
                         {/* Dropdown Menu */}
                         {openMenuId === habit.id && (
-                          <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border py-1 z-10 min-w-[120px]">
+                          <div className={`absolute right-0 ${
+                            menuPosition === 'top' ? 'bottom-full mb-1' : 'top-full mt-1'
+                          } bg-white rounded-lg shadow-xl border py-1 z-20 min-w-[120px]`}>
                             <button
                               onClick={(e) => handleEdit(habit, e)}
-                              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2"
+                              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2 transition-colors"
                             >
                               <Edit className="w-4 h-4" />
                               <span>Edit</span>
                             </button>
                             <button
                               onClick={(e) => handleDelete(habit.id, e)}
-                              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2 text-red-600"
+                              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2 text-red-600 transition-colors"
                             >
                               <Trash2 className="w-4 h-4" />
                               <span>Delete</span>
@@ -237,14 +279,6 @@ const Habits: React.FC<HabitsProps> = ({ habits, onCompleteHabit, onEditHabit, o
           </div>
         )}
       </div>
-
-      {/* Click outside to close menu */}
-      {openMenuId && (
-        <div
-          className="fixed inset-0 z-5"
-          onClick={() => setOpenMenuId(null)}
-        />
-      )}
     </div>
   );
 };
