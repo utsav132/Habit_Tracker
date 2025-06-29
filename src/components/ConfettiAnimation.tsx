@@ -92,7 +92,7 @@ const ConfettiAnimation: React.FC<ConfettiAnimationProps> = ({ show, onComplete 
         setParticles([]);
       };
     }
-  }, [show, onComplete]);
+  }, [show]);
 
   if (!show || particles.length === 0) return null;
 
