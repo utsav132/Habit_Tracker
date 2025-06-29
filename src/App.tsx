@@ -16,6 +16,7 @@ import EditRitual from './components/EditRitual';
 import EditTask from './components/EditTask';
 import EditHabit from './components/EditHabit';
 import ConfettiAnimation from './components/ConfettiAnimation';
+import RewardModal from './components/RewardModal';
 
 type TabType = 'rituals' | 'tasks' | 'habits' | 'achievements';
 
@@ -31,7 +32,17 @@ function App() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
-  const [rewardMessage, setRewardMessage] = useState<string>('');
+  const [showRewardModal, setShowRewardModal] = useState(false);
+  const [rewardData, setRewardData] = useState<{
+    title: string;
+    message: string;
+    reward?: string;
+    type: 'ritual' | 'habit' | 'task' | 'achievement' | 'promotion';
+  }>({
+    title: '',
+    message: '',
+    type: 'ritual'
+  });
   const [devMode, setDevMode] = useState(false);
   const [currentDate, setCurrentDate] = useState('');
 
@@ -75,7 +86,12 @@ function App() {
       
       if (newlyUnlocked.length > 0) {
         setShowConfetti(true);
-        setRewardMessage(`🎉 Achievement Unlocked: ${newlyUnlocked[0].name}!`);
+        setRewardData({
+          title: 'Achievement Unlocked!',
+          message: `Congratulations! You've earned: ${newlyUnlocked[0].name}`,
+          type: 'achievement'
+        });
+        setShowRewardModal(true);
         notificationManager.sendAchievementNotification(newlyUnlocked[0].name);
       }
     }
@@ -121,6 +137,12 @@ function App() {
       dateManager.goToPreviousDay();
       setCurrentDate(dateManager.getFormattedCurrentDate());
     }
+  };
+
+  const showReward = (title: string, message: string, reward?: string, type: 'ritual' | 'habit' | 'task' | 'achievement' | 'promotion' = 'ritual') => {
+    setRewardData({ title, message, reward, type });
+    setShowRewardModal(true);
+    setShowConfetti(true);
   };
 
   const handleCreateRitual = (ritualData: Omit<Ritual, 'id' | 'createdAt'>) => {
@@ -256,21 +278,26 @@ function App() {
         updatedHabits = [...updatedHabits, newHabit];
         updatedRituals = updatedRituals.filter(r => r.id !== ritualId);
         
-        setRewardMessage(`🎉 ${ritual.name} is now a habit! You've maintained it for 60+ days!`);
-        setShowConfetti(true);
+        showReward(
+          'Ritual Promoted!',
+          `${ritual.name} is now a habit! You've maintained it for 20+ days!`,
+          ritual.reward,
+          'promotion'
+        );
         notificationManager.sendRewardNotification(
           'New Habit Formed!',
-          `${ritual.name} is now a habit! You've maintained it for 60+ days!`
+          `${ritual.name} is now a habit! You've maintained it for 20+ days!`
         );
       } else {
-        // Show reward message if ritual has a reward
+        // Show reward message
+        showReward(
+          'Ritual Completed!',
+          `Great job completing ${ritual.name}!`,
+          ritual.reward,
+          'ritual'
+        );
         if (ritual.reward) {
-          setRewardMessage(`🎁 ${ritual.reward}`);
-          setShowConfetti(true);
           notificationManager.sendRewardNotification('Reward Earned!', ritual.reward);
-        } else {
-          setRewardMessage(`✅ Great job completing ${ritual.name}!`);
-          setShowConfetti(true);
         }
       }
 
@@ -328,13 +355,15 @@ function App() {
         updatedHabits = updatedHabits.filter(h => h.id !== habitId);
       } else {
         // Show reward message
+        showReward(
+          'Habit Maintained!',
+          `Excellent! You maintained ${habit.name}!`,
+          habit.reward,
+          'habit'
+        );
         if (habit.reward) {
-          setRewardMessage(`🎁 ${habit.reward}`);
           notificationManager.sendRewardNotification('Reward Earned!', habit.reward);
-        } else {
-          setRewardMessage(`✅ Excellent! You maintained ${habit.name}!`);
         }
-        setShowConfetti(true);
       }
 
       // Send notifications for habit-triggered rituals
@@ -361,8 +390,12 @@ function App() {
 
       const task = prev.tasks.find(t => t.id === taskId);
       if (task && !task.completed) {
-        setRewardMessage(`✅ Task completed: ${task.name}!`);
-        setShowConfetti(true);
+        showReward(
+          'Task Completed!',
+          `Well done! You completed: ${task.name}`,
+          undefined,
+          'task'
+        );
       }
 
       return {
@@ -374,7 +407,10 @@ function App() {
 
   const handleConfettiComplete = () => {
     setShowConfetti(false);
-    setRewardMessage('');
+  };
+
+  const handleRewardModalClose = () => {
+    setShowRewardModal(false);
   };
 
   const tabs = [
@@ -388,15 +424,18 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100">
-      {/* Reward Message */}
-      {rewardMessage && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-40 animate-bounce">
-          {rewardMessage}
-        </div>
-      )}
-
       {/* Confetti Animation */}
       <ConfettiAnimation show={showConfetti} onComplete={handleConfettiComplete} />
+
+      {/* Reward Modal */}
+      <RewardModal
+        show={showRewardModal}
+        onClose={handleRewardModalClose}
+        title={rewardData.title}
+        message={rewardData.message}
+        reward={rewardData.reward}
+        type={rewardData.type}
+      />
 
       {/* Main App */}
       <div className="flex flex-col h-screen">
