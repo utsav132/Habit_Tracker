@@ -122,7 +122,7 @@ const Habits: React.FC<HabitsProps> = ({ habits, onCompleteHabit, onEditHabit, o
 
       {/* Today's Progress */}
       {todaysHabits.length > 0 && (
-        <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-4 mb-6">
+        <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-xl p-4 mb-6">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="font-semibold text-yellow-900">Today's Progress</h3>
@@ -163,7 +163,6 @@ const Habits: React.FC<HabitsProps> = ({ habits, onCompleteHabit, onEditHabit, o
               const isCompletedToday = habit.lastCompleted === getCurrentDate();
               const canComplete = isScheduledToday && !isCompletedToday;
               const daysSinceHabit = getDaysSinceHabit(habit.becameHabitAt);
-              //console.log(daysSinceHabit)
 
               return (
                 <div

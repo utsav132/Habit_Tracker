@@ -159,7 +159,7 @@ const Rituals: React.FC<RitualsProps> = ({
 
             {ritual.streak >= 50 && ritual.streak < 60 && (
               <div className="mt-2 text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded">
-                {20 - ritual.streak} more days to become a habit!
+                {60 - ritual.streak} more days to become a habit!
               </div>
             )}
           </div>
@@ -242,7 +242,7 @@ const Rituals: React.FC<RitualsProps> = ({
 
       {/* Today's Progress */}
       {todaysRituals.length > 0 && (
-        <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4 mb-6">
+        <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-xl p-4 mb-6">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="font-semibold text-purple-900">Today's Progress</h3>
