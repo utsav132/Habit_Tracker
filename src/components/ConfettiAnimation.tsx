@@ -91,9 +91,6 @@ const ConfettiAnimation: React.FC<ConfettiAnimationProps> = ({ show, onComplete 
         clearInterval(interval);
         setParticles([]);
       };
-    } else {
-      // Clear particles immediately when show is false
-      setParticles([]);
     }
   }, [show, onComplete]);
 
