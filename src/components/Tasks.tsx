@@ -169,7 +169,7 @@ const Tasks: React.FC<TasksProps> = ({
 
       {/* Today's Progress */}
       {todaysTasks.length > 0 && (
-        <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl p-4 mb-6">
+        <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-xl p-4 mb-6">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="font-semibold text-blue-900">Today's Progress</h3>
