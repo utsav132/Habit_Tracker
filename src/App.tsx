@@ -476,7 +476,7 @@ function App() {
         className="fixed bottom-4 right-4 z-40 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-full px-3 py-2 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 group"
       >
         <div className="flex items-center space-x-2 text-sm">
-          <div className="w-2 h-2 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full animate-pulse"></div>
+          {/* <div className="w-2 h-2 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full animate-pulse"></div> */}
           <span className="text-gray-700 font-medium">built with bolt</span>
           <ExternalLink className="w-3 h-3 text-gray-500 group-hover:text-purple-500 transition-colors" />
         </div>
@@ -548,7 +548,7 @@ function App() {
               </div>
               
               {/* Dev Mode Toggle */}
-              <button
+              {/* <button
                 onClick={toggleDevMode}
                 className={`flex items-center space-x-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
                   devMode
@@ -558,7 +558,7 @@ function App() {
               >
                 <Settings className="w-4 h-4" />
                 <span className="hidden sm:inline">Dev Mode</span>
-              </button>
+              </button> */}
             </div>
           </div>
         </nav>
