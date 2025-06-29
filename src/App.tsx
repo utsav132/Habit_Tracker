@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Calendar, Zap, Crown, Trophy, Settings, ChevronRight, ChevronLeft } from 'lucide-react';
 import { AppData, Ritual, Habit, Task, HabitItem } from './types';
 import { getStoredData, saveData } from './utils/storage';

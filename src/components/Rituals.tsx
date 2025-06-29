@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Clock, Zap, Flame, Gift, Calendar, Edit, Trash2, MoreVertical, Shield, ChevronDown, ChevronUp } from 'lucide-react';
-import { Ritual, HabitItem } from '../types';
-import { getTodaysScheduledItems, getOtherItems } from '../utils/streaks';
+import { Ritual } from '../types';
+import { getTodaysScheduledRituals, getOtherRituals } from '../utils/streaks';
 import { getCurrentDate } from '../utils/storage';
 
 interface RitualsProps {
@@ -22,8 +22,8 @@ const Rituals: React.FC<RitualsProps> = ({
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [showOtherRituals, setShowOtherRituals] = useState(false);
   
-  const todaysRituals = getTodaysScheduledItems(rituals);
-  const otherRituals = getOtherItems(rituals);
+  const todaysRituals = getTodaysScheduledRituals(rituals);
+  const otherRituals = getOtherRituals(rituals);
   const completedToday = todaysRituals.filter(ritual => 
     ritual.lastCompleted === getCurrentDate()
   ).length;

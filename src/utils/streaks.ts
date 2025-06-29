@@ -172,7 +172,19 @@ export const getTodaysScheduledItems = (items: HabitItem[]): HabitItem[] => {
   return items.filter(item => item.frequency.includes(today));
 };
 
+export const getTodaysScheduledRituals = (items: Ritual[]): Ritual[] => {
+  const dateManager = DateManager.getInstance();
+  const today = dateManager.getCurrentDayOfWeek();
+  return items.filter(item => item.frequency.includes(today));
+};
+
 export const getOtherItems = (items: HabitItem[]): HabitItem[] => {
+  const dateManager = DateManager.getInstance();
+  const today = dateManager.getCurrentDayOfWeek();
+  return items.filter(item => !item.frequency.includes(today));
+};
+
+export const getOtherRituals = (items: Ritual[]): Ritual[] => {
   const dateManager = DateManager.getInstance();
   const today = dateManager.getCurrentDayOfWeek();
   return items.filter(item => !item.frequency.includes(today));
