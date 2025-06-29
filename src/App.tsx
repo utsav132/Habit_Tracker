@@ -31,7 +31,7 @@ function App() {
   const [editingRitual, setEditingRitual] = useState<Ritual | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
-  const [showConfetti, setShowConfetti] = useState(false);
+  const [confettiKey, setConfettiKey] = useState(0); // Use key to control confetti instances
   const [showRewardModal, setShowRewardModal] = useState(false);
   const [rewardData, setRewardData] = useState<{
     title: string;
@@ -85,13 +85,12 @@ function App() {
       );
       
       if (newlyUnlocked.length > 0) {
-        setShowConfetti(true);
-        setRewardData({
-          title: 'Achievement Unlocked!',
-          message: `Congratulations! You've earned: ${newlyUnlocked[0].name}`,
-          type: 'achievement'
-        });
-        setShowRewardModal(true);
+        showReward(
+          'Achievement Unlocked!',
+          `Congratulations! You've earned: ${newlyUnlocked[0].name}`,
+          undefined,
+          'achievement'
+        );
         notificationManager.sendAchievementNotification(newlyUnlocked[0].name);
       }
     }
@@ -142,7 +141,8 @@ function App() {
   const showReward = (title: string, message: string, reward?: string, type: 'ritual' | 'habit' | 'task' | 'achievement' | 'promotion' = 'ritual') => {
     setRewardData({ title, message, reward, type });
     setShowRewardModal(true);
-    setShowConfetti(true);
+    // Trigger confetti by incrementing the key
+    setConfettiKey(prev => prev + 1);
   };
 
   const handleCreateRitual = (ritualData: Omit<Ritual, 'id' | 'createdAt'>) => {
@@ -405,10 +405,6 @@ function App() {
     });
   };
 
-  const handleConfettiComplete = () => {
-    setShowConfetti(false);
-  };
-
   const handleRewardModalClose = () => {
     setShowRewardModal(false);
   };
@@ -424,8 +420,8 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100">
-      {/* Confetti Animation */}
-      <ConfettiAnimation show={showConfetti} onComplete={handleConfettiComplete} />
+      {/* Confetti Animation - Only shows when key changes */}
+      <ConfettiAnimation key={confettiKey} show={confettiKey > 0} onComplete={() => {}} />
 
       {/* Reward Modal */}
       <RewardModal
