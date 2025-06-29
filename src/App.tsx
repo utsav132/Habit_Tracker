@@ -502,7 +502,7 @@ function App() {
                 })}
               </div>
               
-              Dev Mode Toggle
+              {/* Dev Mode Toggle */}
               <button
                 onClick={toggleDevMode}
                 className={`flex items-center space-x-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
