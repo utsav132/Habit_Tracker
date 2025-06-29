@@ -31,7 +31,6 @@ export const calculateStreak = (item: HabitItem): number => {
           // Check if they can use a frozen streak
           if (frozenStreaksUsed < maxFrozenStreaks) {
             frozenStreaksUsed++;
-            streak++; // Maintain streak using frozen streak
           } else {
             break; // Streak is broken
           }
@@ -143,7 +142,7 @@ export const calculateStreakWithFrozenUsage = (item: HabitItem): { streak: numbe
 };
 
 export const shouldPromoteToHabit = (ritual: Ritual): boolean => {
-  return ritual.streak >= 20;
+  return ritual.streak >= 60;
 };
 
 export const shouldDemoteToRitual = (habit: Habit): boolean => {
