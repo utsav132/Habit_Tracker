@@ -12,7 +12,7 @@ export interface HabitTrigger {
 export interface BaseHabit {
   id: string;
   name: string;
-  trigger: TimeTrigger | HabitTrigger;
+  trigger?: TimeTrigger | HabitTrigger; // Made optional to support habits without triggers
   frequency: number[]; // days of week 0-6 (Sunday = 0)
   reward?: string;
   streak: number;
@@ -25,10 +25,12 @@ export interface BaseHabit {
 
 export interface Ritual extends BaseHabit {
   type: 'ritual';
+  trigger: TimeTrigger | HabitTrigger; // Required for rituals
 }
 
 export interface Habit extends BaseHabit {
   type: 'habit';
+  trigger?: TimeTrigger | HabitTrigger; // Optional for habits (can be in "Not Set" state)
   becameHabitAt: string;
   ritualsToRitualDays?: number; // Track days to potentially become ritual again
 }

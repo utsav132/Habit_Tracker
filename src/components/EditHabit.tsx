@@ -48,6 +48,12 @@ const EditHabit: React.FC<EditHabitProps> = ({
     ...existingRituals
   ];
 
+  // Get habit IDs that are already used as triggers (excluding current habit)
+  const usedTriggerHabitIds = [
+    ...existingRituals.filter(r => r.trigger.type === 'habit').map(r => r.trigger.habitId),
+    ...existingHabits.filter(h => h.id !== habit?.id && h.trigger.type === 'habit').map(h => (h.trigger as HabitTrigger).habitId)
+  ];
+
   useEffect(() => {
     if (habit) {
       setName(habit.name);
@@ -213,6 +219,7 @@ const EditHabit: React.FC<EditHabitProps> = ({
                 habits={existingHabits.filter(h => h.id !== habit.id)}
                 onSelect={setSelectedHabit}
                 selectedHabitId={selectedHabit?.id}
+                usedTriggerHabitIds={usedTriggerHabitIds}
               />
             )}
           </div>

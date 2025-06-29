@@ -41,6 +41,11 @@ const CreateRitual: React.FC<CreateRitualProps> = ({
 
   const allExistingItems = [...existingHabits, ...existingRituals];
 
+  // Get habit IDs that are already used as triggers
+  const usedTriggerHabitIds = existingRituals
+    .filter(ritual => ritual.trigger.type === 'habit')
+    .map(ritual => (ritual.trigger as HabitTrigger).habitId);
+
   const acceptSuggestedName = () => {
     setName(suggestedName);
     setShowDuplicateWarning(false);
@@ -208,6 +213,7 @@ const CreateRitual: React.FC<CreateRitualProps> = ({
                 habits={existingHabits}
                 onSelect={setSelectedHabit}
                 selectedHabitId={selectedHabit?.id}
+                usedTriggerHabitIds={usedTriggerHabitIds}
               />
             )}
           </div>

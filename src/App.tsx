@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Calendar, Zap, Crown, Trophy, Settings, ChevronRight, ChevronLeft } from 'lucide-react';
-import { AppData, Ritual, Habit, Task, HabitItem } from './types';
+import { AppData, Ritual, Habit, Task, HabitItem, HabitTrigger } from './types';
 import { getStoredData, saveData } from './utils/storage';
 import { DateManager } from './utils/dateUtils';
 import { calculateStreak, calculateFrozenStreaks, shouldPromoteToHabit, shouldDemoteToRitual } from './utils/streaks';
@@ -234,10 +234,41 @@ function App() {
 
   const handleDeleteHabit = (habitId: string) => {
     notificationManager.clearNotification(habitId);
-    setData(prev => ({
-      ...prev,
-      habits: prev.habits.filter(h => h.id !== habitId),
-    }));
+    
+    setData(prev => {
+      // Find all rituals and habits that are triggered by this habit
+      const affectedRituals = prev.rituals.filter(r => 
+        r.trigger.type === 'habit' && r.trigger.habitId === habitId
+      );
+      const affectedHabits = prev.habits.filter(h => 
+        h.trigger?.type === 'habit' && (h.trigger as HabitTrigger).habitId === habitId
+      );
+
+      // Remove triggers from affected items
+      const updatedRituals = prev.rituals.map(r => {
+        if (r.trigger.type === 'habit' && r.trigger.habitId === habitId) {
+          const { trigger, ...ritualWithoutTrigger } = r;
+          return ritualWithoutTrigger as Ritual;
+        }
+        return r;
+      });
+
+      const updatedHabits = prev.habits
+        .filter(h => h.id !== habitId) // Remove the deleted habit
+        .map(h => {
+          if (h.trigger?.type === 'habit' && (h.trigger as HabitTrigger).habitId === habitId) {
+            const { trigger, ...habitWithoutTrigger } = h;
+            return habitWithoutTrigger as Habit;
+          }
+          return h;
+        });
+
+      return {
+        ...prev,
+        rituals: updatedRituals,
+        habits: updatedHabits,
+      };
+    });
   };
 
   const handleCompleteRitual = (ritualId: string) => {
@@ -545,6 +576,8 @@ function App() {
                 onCompleteHabit={handleCompleteHabit}
                 onEditHabit={handleEditHabit}
                 onDeleteHabit={handleDeleteHabit}
+                allHabits={allHabits}
+                allRituals={data.rituals}
               />
             )}
             {activeTab === 'achievements' && (

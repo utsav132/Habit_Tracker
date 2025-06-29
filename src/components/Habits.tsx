@@ -1,19 +1,33 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Crown, Flame, Gift, Calendar, Clock, Edit, Trash2, MoreVertical, Shield } from 'lucide-react';
-import { Habit } from '../types';
+import { Crown, Flame, Gift, Calendar, Clock, Edit, Trash2, MoreVertical, Shield, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
+import { Habit, HabitItem } from '../types';
 import { getTodaysScheduledItems } from '../utils/streaks';
 import { getCurrentDate } from '../utils/storage';
+import DeleteConfirmationModal from './DeleteConfirmationModal';
 
 interface HabitsProps {
   habits: Habit[];
   onCompleteHabit: (habitId: string) => void;
   onEditHabit: (habit: Habit) => void;
   onDeleteHabit: (habitId: string) => void;
+  allHabits: HabitItem[];
+  allRituals: any[];
 }
 
-const Habits: React.FC<HabitsProps> = ({ habits, onCompleteHabit, onEditHabit, onDeleteHabit }) => {
+const Habits: React.FC<HabitsProps> = ({ 
+  habits, 
+  onCompleteHabit, 
+  onEditHabit, 
+  onDeleteHabit,
+  allHabits,
+  allRituals
+}) => {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [menuPosition, setMenuPosition] = useState<'bottom' | 'top'>('bottom');
+  const [showNotSetHabits, setShowNotSetHabits] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [habitToDelete, setHabitToDelete] = useState<Habit | null>(null);
+  const [affectedItems, setAffectedItems] = useState<HabitItem[]>([]);
   const menuRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   
   const todaysHabits = getTodaysScheduledItems(habits);
@@ -21,7 +35,13 @@ const Habits: React.FC<HabitsProps> = ({ habits, onCompleteHabit, onEditHabit, o
     habit.lastCompleted === getCurrentDate()
   ).length;
 
+  // Separate habits with and without triggers
+  const habitsWithTriggers = habits.filter(habit => habit.trigger);
+  const habitsWithoutTriggers = habits.filter(habit => !habit.trigger);
+
   const formatTrigger = (trigger: Habit['trigger']) => {
+    if (!trigger) return 'No trigger set';
+    
     if (trigger.type === 'time') {
       const [hours, minutes] = trigger.time.split(':');
       const hour = parseInt(hours);
@@ -80,12 +100,39 @@ const Habits: React.FC<HabitsProps> = ({ habits, onCompleteHabit, onEditHabit, o
     setOpenMenuId(null);
   };
 
-  const handleDelete = (habitId: string, e: React.MouseEvent) => {
+  const handleDelete = (habit: Habit, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (confirm('Are you sure you want to delete this habit?')) {
-      onDeleteHabit(habitId);
+    
+    // Find all items that are triggered by this habit
+    const affected = [
+      ...allRituals.filter(r => r.trigger.type === 'habit' && r.trigger.habitId === habit.id),
+      ...allHabits.filter(h => h.trigger?.type === 'habit' && h.trigger.habitId === habit.id)
+    ];
+
+    if (affected.length > 0) {
+      setHabitToDelete(habit);
+      setAffectedItems(affected);
+      setDeleteModalOpen(true);
+    } else {
+      onDeleteHabit(habit.id);
     }
+    
     setOpenMenuId(null);
+  };
+
+  const confirmDelete = () => {
+    if (habitToDelete) {
+      onDeleteHabit(habitToDelete.id);
+      setDeleteModalOpen(false);
+      setHabitToDelete(null);
+      setAffectedItems([]);
+    }
+  };
+
+  const cancelDelete = () => {
+    setDeleteModalOpen(false);
+    setHabitToDelete(null);
+    setAffectedItems([]);
   };
 
   // Close menu when clicking outside
@@ -105,6 +152,139 @@ const Habits: React.FC<HabitsProps> = ({ habits, onCompleteHabit, onEditHabit, o
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [openMenuId]);
+
+  const HabitCard: React.FC<{ habit: Habit; showTriggerWarning?: boolean }> = ({ habit, showTriggerWarning = false }) => {
+    const isScheduledToday = habit.frequency.includes(new Date().getDay());
+    const isCompletedToday = habit.lastCompleted === getCurrentDate();
+    const canComplete = isScheduledToday && !isCompletedToday && habit.trigger; // Can only complete if has trigger
+    const daysSinceHabit = getDaysSinceHabit(habit.becameHabitAt);
+
+    return (
+      <div
+        className={`bg-white rounded-xl p-4 border-2 transition-all hover:shadow-lg relative ${
+          isCompletedToday
+            ? 'border-green-200 bg-green-50'
+            : isScheduledToday && habit.trigger
+            ? 'border-yellow-200 hover:border-yellow-300'
+            : !habit.trigger
+            ? 'border-orange-200 bg-orange-50'
+            : 'border-gray-200'
+        }`}
+      >
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <div className="flex items-center space-x-2 mb-2">
+              <Crown className="w-5 h-5 text-yellow-500" />
+              <h3 className="text-lg font-semibold text-gray-900">{habit.name}</h3>
+              <div className="flex items-center space-x-1 bg-orange-100 text-orange-700 px-2 py-1 rounded-full text-xs">
+                <Flame className="w-3 h-3" />
+                <span>{habit.streak}</span>
+              </div>
+              {habit.frozenStreaks > 0 && (
+                <div className="flex items-center space-x-1 bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs">
+                  <Shield className="w-3 h-3" />
+                  <span>{habit.frozenStreaks}</span>
+                </div>
+              )}
+            </div>
+
+            {showTriggerWarning && !habit.trigger && (
+              <div className="mb-2 p-2 bg-orange-100 border border-orange-200 rounded-lg">
+                <div className="flex items-center space-x-2">
+                  <AlertTriangle className="w-4 h-4 text-orange-600" />
+                  <span className="text-sm text-orange-800">No trigger set - please edit to add a trigger</span>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-1 text-sm text-gray-600 mb-2">
+              <div className="flex items-center space-x-2">
+                <Clock className="w-4 h-4" />
+                <span>{formatTrigger(habit.trigger)}</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Calendar className="w-4 h-4" />
+                <span>{formatFrequency(habit.frequency)}</span>
+              </div>
+              {habit.reward && (
+                <div className="flex items-center space-x-2">
+                  <Gift className="w-4 h-4" />
+                  <span>{habit.reward}</span>
+                </div>
+              )}
+            </div>
+
+            {daysSinceHabit >= 90 && (
+              <div className="mt-1 text-xs text-green-600 bg-green-100 px-2 py-1 rounded inline-block ml-2">
+                3+ month streak! 🎉
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center space-x-2 ml-4">
+            {canComplete && (
+              <button
+                onClick={() => onCompleteHabit(habit.id)}
+                className="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors text-sm font-medium"
+              >
+                Complete
+              </button>
+            )}
+
+            {isCompletedToday && (
+              <div className="bg-green-100 text-green-700 px-4 py-2 rounded-lg text-sm font-medium">
+                Completed ✓
+              </div>
+            )}
+
+            {!isScheduledToday && habit.trigger && (
+              <div className="text-gray-400 text-sm">
+                Not scheduled
+              </div>
+            )}
+
+            {!habit.trigger && (
+              <div className="text-orange-600 text-sm font-medium">
+                No trigger
+              </div>
+            )}
+
+            {/* Menu Button */}
+            <div className="relative" ref={el => menuRefs.current[habit.id] = el}>
+              <button
+                onClick={(e) => handleMenuClick(habit.id, e)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <MoreVertical className="w-4 h-4 text-gray-500" />
+              </button>
+
+              {/* Dropdown Menu */}
+              {openMenuId === habit.id && (
+                <div className={`absolute right-0 ${
+                  menuPosition === 'top' ? 'bottom-full mb-1' : 'top-full mt-1'
+                } bg-white rounded-lg shadow-xl border py-1 z-20 min-w-[120px]`}>
+                  <button
+                    onClick={(e) => handleEdit(habit, e)}
+                    className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2 transition-colors"
+                  >
+                    <Edit className="w-4 h-4" />
+                    <span>Edit</span>
+                  </button>
+                  <button
+                    onClick={(e) => handleDelete(habit, e)}
+                    className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2 text-red-600 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>Delete</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="h-full flex flex-col">
@@ -157,126 +337,55 @@ const Habits: React.FC<HabitsProps> = ({ habits, onCompleteHabit, onEditHabit, o
             </div>
           </div>
         ) : (
-          <div className="space-y-4">
-            {habits.map((habit) => {
-              const isScheduledToday = habit.frequency.includes(new Date().getDay());
-              const isCompletedToday = habit.lastCompleted === getCurrentDate();
-              const canComplete = isScheduledToday && !isCompletedToday;
-              const daysSinceHabit = getDaysSinceHabit(habit.becameHabitAt);
-
-              return (
-                <div
-                  key={habit.id}
-                  className={`bg-white rounded-xl p-4 border-2 transition-all hover:shadow-lg relative ${
-                    isCompletedToday
-                      ? 'border-green-200 bg-green-50'
-                      : isScheduledToday
-                      ? 'border-yellow-200 hover:border-yellow-300'
-                      : 'border-gray-200'
-                  }`}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <Crown className="w-5 h-5 text-yellow-500" />
-                        <h3 className="text-lg font-semibold text-gray-900">{habit.name}</h3>
-                        <div className="flex items-center space-x-1 bg-orange-100 text-orange-700 px-2 py-1 rounded-full text-xs">
-                          <Flame className="w-3 h-3" />
-                          <span>{habit.streak}</span>
-                        </div>
-                        {habit.frozenStreaks > 0 && (
-                          <div className="flex items-center space-x-1 bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs">
-                            <Shield className="w-3 h-3" />
-                            <span>{habit.frozenStreaks}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="space-y-1 text-sm text-gray-600 mb-2">
-                        <div className="flex items-center space-x-2">
-                          <Clock className="w-4 h-4" />
-                          <span>{formatTrigger(habit.trigger)}</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Calendar className="w-4 h-4" />
-                          <span>{formatFrequency(habit.frequency)}</span>
-                        </div>
-                        {habit.reward && (
-                          <div className="flex items-center space-x-2">
-                            <Gift className="w-4 h-4" />
-                            <span>{habit.reward}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {daysSinceHabit >= 90 && (
-                        <div className="mt-1 text-xs text-green-600 bg-green-100 px-2 py-1 rounded inline-block ml-2">
-                          3+ month streak! 🎉
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex items-center space-x-2 ml-4">
-                      {canComplete && (
-                        <button
-                          onClick={() => onCompleteHabit(habit.id)}
-                          className="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors text-sm font-medium"
-                        >
-                          Complete
-                        </button>
-                      )}
-
-                      {isCompletedToday && (
-                        <div className="bg-green-100 text-green-700 px-4 py-2 rounded-lg text-sm font-medium">
-                          Completed ✓
-                        </div>
-                      )}
-
-                      {!isScheduledToday && (
-                        <div className="text-gray-400 text-sm">
-                          Not scheduled
-                        </div>
-                      )}
-
-                      {/* Menu Button */}
-                      <div className="relative" ref={el => menuRefs.current[habit.id] = el}>
-                        <button
-                          onClick={(e) => handleMenuClick(habit.id, e)}
-                          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                        >
-                          <MoreVertical className="w-4 h-4 text-gray-500" />
-                        </button>
-
-                        {/* Dropdown Menu */}
-                        {openMenuId === habit.id && (
-                          <div className={`absolute right-0 ${
-                            menuPosition === 'top' ? 'bottom-full mb-1' : 'top-full mt-1'
-                          } bg-white rounded-lg shadow-xl border py-1 z-20 min-w-[120px]`}>
-                            <button
-                              onClick={(e) => handleEdit(habit, e)}
-                              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2 transition-colors"
-                            >
-                              <Edit className="w-4 h-4" />
-                              <span>Edit</span>
-                            </button>
-                            <button
-                              onClick={(e) => handleDelete(habit.id, e)}
-                              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2 text-red-600 transition-colors"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                              <span>Delete</span>
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+          <div className="space-y-6">
+            {/* Habits with triggers */}
+            {habitsWithTriggers.length > 0 && (
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Active Habits</h2>
+                <div className="space-y-4">
+                  {habitsWithTriggers.map((habit) => (
+                    <HabitCard key={habit.id} habit={habit} />
+                  ))}
                 </div>
-              );
-            })}
+              </div>
+            )}
+
+            {/* Habits without triggers */}
+            {habitsWithoutTriggers.length > 0 && (
+              <div>
+                <button
+                  onClick={() => setShowNotSetHabits(!showNotSetHabits)}
+                  className="flex items-center space-x-2 text-lg font-semibold text-gray-900 mb-4 hover:text-orange-600 transition-colors"
+                >
+                  <span>Not Set ({habitsWithoutTriggers.length})</span>
+                  {showNotSetHabits ? (
+                    <ChevronUp className="w-5 h-5" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5" />
+                  )}
+                </button>
+                
+                {showNotSetHabits && (
+                  <div className="space-y-4">
+                    {habitsWithoutTriggers.map((habit) => (
+                      <HabitCard key={habit.id} habit={habit} showTriggerWarning={true} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={deleteModalOpen}
+        onClose={cancelDelete}
+        onConfirm={confirmDelete}
+        habitName={habitToDelete?.name || ''}
+        affectedItems={affectedItems}
+      />
     </div>
   );
 };
