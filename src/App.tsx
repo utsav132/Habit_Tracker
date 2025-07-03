@@ -118,12 +118,12 @@ function App() {
 
   const generateId = () => Math.random().toString(36).substr(2, 9);
 
-  // const toggleDevMode = () => {
-  //   const newDevMode = !devMode;
-  //   setDevMode(newDevMode);
-  //   dateManager.setDevMode(newDevMode);
-  //   setCurrentDate(dateManager.getFormattedCurrentDate());
-  // };
+  const toggleDevMode = () => {
+    const newDevMode = !devMode;
+    setDevMode(newDevMode);
+    dateManager.setDevMode(newDevMode);
+    setCurrentDate(dateManager.getFormattedCurrentDate());
+  };
 
   const goToNextDay = () => {
     if (devMode) {
@@ -502,7 +502,7 @@ function App() {
                 })}
               </div>
               
-              {/* Dev Mode Toggle
+              Dev Mode Toggle
               <button
                 onClick={toggleDevMode}
                 className={`flex items-center space-x-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
@@ -513,7 +513,7 @@ function App() {
               >
                 <Settings className="w-4 h-4" />
                 <span className="hidden sm:inline">Dev Mode</span>
-              </button> */}
+              </button>
             </div>
           </div>
         </nav>
